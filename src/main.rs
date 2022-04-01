@@ -52,6 +52,10 @@ fn gemini_to_html(response: &Response, url: &Url) -> (String, String) {
         let mut href = split.remove(0).to_string();
         let text = split.join(" ");
 
+        if href.starts_with('/') {
+          href = format!("gemini://{}{}", url.authority.host, href);
+        }
+
         if var("PROXY_BY_DEFAULT").unwrap_or_else(|_| "true".to_string())
           == "true"
           && href.contains("gemini://")
@@ -184,7 +188,7 @@ fn gemini_to_html(response: &Response, url: &Url) -> (String, String) {
   (title, response_string)
 }
 
-#[allow(clippy::unused_async, clippy::future_not_send)]
+#[allow(clippy::unused_async, clippy::future_not_send, clippy::too_many_lines)]
 async fn default(req: actix_web::HttpRequest) -> Result<HttpResponse, Error> {
   // Try to construct a Gemini URL
   let url = match Url::try_from(&*if req.path().starts_with("/proxy") {
@@ -216,14 +220,52 @@ async fn default(req: actix_web::HttpRequest) -> Result<HttpResponse, Error> {
       return Ok(HttpResponse::Ok().body(e.to_string()));
     }
   };
+  let fallback_url =
+    match Url::try_from(&*if req.path().starts_with("/proxy") {
+      format!("gemini://{}/", req.path().replace("/proxy/", ""))
+    } else if req.path().starts_with("/x") {
+      format!("gemini://{}/", req.path().replace("/x/", ""))
+    } else {
+      // Try to set `ROOT` as `ROOT` environment variable, or use
+      // `"gemini://fuwn.me"` as default.
+      format!(
+        "{}{}/",
+        {
+          if let Ok(root) = var("ROOT") {
+            root
+          } else {
+            warn!(
+              "could not use ROOT from environment variables, proceeding with \
+               default root: gemini://fuwn.me"
+            );
+
+            "gemini://fuwn.me".to_string()
+          }
+        },
+        req.path()
+      )
+    }) {
+      Ok(url) => url,
+      Err(e) => {
+        return Ok(HttpResponse::Ok().body(e.to_string()));
+      }
+    };
   // Make a request to get Gemini content and time it.
   let mut timer = Instant::now();
-  let response = match gmi::request::make_request(&url) {
+  let mut response = match gmi::request::make_request(&url) {
     Ok(response) => response,
     Err(e) => {
       return Ok(HttpResponse::Ok().body(e.to_string()));
     }
   };
+  if response.data.is_empty() {
+    response = match gmi::request::make_request(&fallback_url) {
+      Ok(response) => response,
+      Err(e) => {
+        return Ok(HttpResponse::Ok().body(e.to_string()));
+      }
+    };
+  }
   let response_time_taken = timer.elapsed();
 
   // Reset timer for below
