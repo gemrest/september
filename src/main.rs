@@ -110,7 +110,7 @@ fn gemini_to_html(response: &Response, url: &Url) -> (String, String) {
           response_string.push_str("</ul>\n");
         }
 
-        match line.get(0..2) {
+        match line.get(0..3) {
           Some(heading) =>
             match heading {
               "###" => {
