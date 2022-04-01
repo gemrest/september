@@ -37,7 +37,11 @@ use actix_web::{web, Error, HttpResponse};
 use gmi::{protocol::Response, url::Url};
 
 #[allow(clippy::too_many_lines)]
-fn gemini_to_html(response: &Response, url: &Url) -> (String, String) {
+fn gemini_to_html(
+  response: &Response,
+  url: &Url,
+  is_proxy: bool,
+) -> (String, String) {
   let mut response_string = String::new();
   let mut in_block = false;
   let mut in_list = false;
@@ -60,7 +64,22 @@ fn gemini_to_html(response: &Response, url: &Url) -> (String, String) {
           == "true"
           && href.contains("gemini://")
         {
-          href = format!("/proxy/{}", href.trim_start_matches("gemini://"));
+          if is_proxy
+            || href
+              .trim_start_matches("gemini://")
+              .trim_end_matches('/')
+              .split('/')
+              .collect::<Vec<_>>()
+              .get(0)
+              .unwrap()
+              != &url.authority.host.as_str()
+          {
+            href = format!("/proxy/{}", href.trim_start_matches("gemini://"));
+          } else {
+            href = href
+              .trim_start_matches("gemini://")
+              .replace(&url.authority.host, "");
+          }
         }
 
         if let Ok(keeps) = var("KEEP_GEMINI_EXACT") {
@@ -191,15 +210,20 @@ fn gemini_to_html(response: &Response, url: &Url) -> (String, String) {
 fn make_url(
   path: &str,
   fallback: bool,
+  is_proxy: &mut bool,
 ) -> Result<Url, gmi::url::UrlParseError> {
   Ok(
     match Url::try_from(&*if path.starts_with("/proxy") {
+      *is_proxy = true;
+
       format!(
         "gemini://{}{}",
         path.replace("/proxy/", ""),
         if fallback { "/" } else { "" }
       )
     } else if path.starts_with("/x") {
+      *is_proxy = true;
+
       format!(
         "gemini://{}{}",
         path.replace("/x/", ""),
@@ -234,8 +258,9 @@ fn make_url(
 
 #[allow(clippy::unused_async, clippy::future_not_send, clippy::too_many_lines)]
 async fn default(req: actix_web::HttpRequest) -> Result<HttpResponse, Error> {
+  let mut is_proxy = false;
   // Try to construct a Gemini URL
-  let url = make_url(req.path(), false).unwrap();
+  let url = make_url(req.path(), false, &mut is_proxy).unwrap();
   // Make a request to get Gemini content and time it.
   let mut timer = Instant::now();
   let mut response = match gmi::request::make_request(&url) {
@@ -245,13 +270,14 @@ async fn default(req: actix_web::HttpRequest) -> Result<HttpResponse, Error> {
     }
   };
   if response.data.is_empty() {
-    response =
-      match gmi::request::make_request(&make_url(req.path(), true).unwrap()) {
-        Ok(response) => response,
-        Err(e) => {
-          return Ok(HttpResponse::Ok().body(e.to_string()));
-        }
-      };
+    response = match gmi::request::make_request(
+      &make_url(req.path(), true, &mut is_proxy).unwrap(),
+    ) {
+      Ok(response) => response,
+      Err(e) => {
+        return Ok(HttpResponse::Ok().body(e.to_string()));
+      }
+    };
   }
   let response_time_taken = timer.elapsed();
 
@@ -259,7 +285,7 @@ async fn default(req: actix_web::HttpRequest) -> Result<HttpResponse, Error> {
   timer = Instant::now();
 
   // Convert Gemini Response to HTML and time it.
-  let mut html_context = gemini_to_html(&response, &url);
+  let mut html_context = gemini_to_html(&response, &url, is_proxy);
   let convert_time_taken = timer.elapsed();
 
   // Try to add an external stylesheet from the `CSS_EXTERNAL` environment
