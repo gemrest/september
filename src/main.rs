@@ -36,6 +36,21 @@ use std::{env::var, time::Instant};
 use actix_web::{web, Error, HttpResponse};
 use gmi::{protocol::Response, url::Url};
 
+fn link_from_host_href(url: &Url, href: &str) -> String {
+  format!(
+    "gemini://{}{}{}",
+    url.authority.host,
+    {
+      if href.starts_with('/') {
+        ""
+      } else {
+        "/"
+      }
+    },
+    href
+  )
+}
+
 #[allow(clippy::too_many_lines)]
 fn gemini_to_html(
   response: &Response,
@@ -52,12 +67,12 @@ fn gemini_to_html(
       // Convert links
       "=" => {
         let line = line.replace("=>", "").trim_start().to_owned();
-        let mut split = line.split(' ').collect::<Vec<_>>();
+        let mut split = line.split_whitespace().collect::<Vec<_>>();
         let mut href = split.remove(0).to_string();
         let text = split.join(" ");
 
-        if href.starts_with('/') {
-          href = format!("gemini://{}{}", url.authority.host, href);
+        if href.starts_with('/') || !href.contains("://") {
+          href = link_from_host_href(url, &href);
         }
 
         if var("PROXY_BY_DEFAULT").unwrap_or_else(|_| "true".to_string())
@@ -85,9 +100,8 @@ fn gemini_to_html(
         if let Ok(keeps) = var("KEEP_GEMINI_EXACT") {
           let mut keeps = keeps.split(',');
 
-          if href.starts_with('/') {
-            let temporary_href =
-              format!("gemini://{}{}", url.authority.host, href);
+          if href.starts_with('/') || !href.contains("://") {
+            let temporary_href = link_from_host_href(url, &href);
 
             if keeps.any(|k| k == &*temporary_href) {
               href = temporary_href;
@@ -97,9 +111,10 @@ fn gemini_to_html(
 
         if let Ok(keeps) = var("KEEP_GEMINI_DOMAIN") {
           if href.starts_with('/')
-            && keeps.split(',').any(|k| k == &*url.authority.host)
+            || !href.contains("://")
+              && keeps.split(',').any(|k| k == &*url.authority.host)
           {
-            href = format!("gemini://{}{}", url.authority.host, href);
+            href = link_from_host_href(url, &href);
           }
         }
 
