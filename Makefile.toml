@@ -1,0 +1,36 @@
+# ------------
+# | Wrappers |
+# ------------
+[tasks.fmt]
+command = "cargo"
+args = ["fmt"]
+private = true
+
+[tasks.check]
+command = "cargo"
+args = ["check"]
+private = true
+
+[tasks.clippy]
+command = "cargo"
+args = ["clippy"]
+private = true
+
+# -------------
+# | Executors |
+# -------------
+[tasks.checkf]
+dependencies = ["fmt", "check"]
+
+[tasks.checkfc]
+dependencies = ["fmt", "check", "clippy"]
+
+[tasks.run]
+dependencies = ["checkfc"]
+command = "cargo"
+args = ["run"]
+
+[tasks.docker-build]
+dependencies = ["checkfc"]
+command = "docker"
+args = ["build", "-t", "fuwn/september", "."]
