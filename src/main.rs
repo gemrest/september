@@ -188,48 +188,28 @@ fn gemini_to_html(response: &Response, url: &Url) -> (String, String) {
   (title, response_string)
 }
 
-#[allow(clippy::unused_async, clippy::future_not_send, clippy::too_many_lines)]
-async fn default(req: actix_web::HttpRequest) -> Result<HttpResponse, Error> {
-  // Try to construct a Gemini URL
-  let url = match Url::try_from(&*if req.path().starts_with("/proxy") {
-    format!("gemini://{}", req.path().replace("/proxy/", ""))
-  } else if req.path().starts_with("/x") {
-    format!("gemini://{}", req.path().replace("/x/", ""))
-  } else {
-    // Try to set `ROOT` as `ROOT` environment variable, or use
-    // `"gemini://fuwn.me"` as default.
-    format!(
-      "{}{}",
-      {
-        if let Ok(root) = var("ROOT") {
-          root
-        } else {
-          warn!(
-            "could not use ROOT from environment variables, proceeding with \
-             default root: gemini://fuwn.me"
-          );
-
-          "gemini://fuwn.me".to_string()
-        }
-      },
-      req.path()
-    )
-  }) {
-    Ok(url) => url,
-    Err(e) => {
-      return Ok(HttpResponse::Ok().body(e.to_string()));
-    }
-  };
-  let fallback_url =
-    match Url::try_from(&*if req.path().starts_with("/proxy") {
-      format!("gemini://{}/", req.path().replace("/proxy/", ""))
-    } else if req.path().starts_with("/x") {
-      format!("gemini://{}/", req.path().replace("/x/", ""))
+fn make_url(
+  path: &str,
+  fallback: bool,
+) -> Result<Url, gmi::url::UrlParseError> {
+  Ok(
+    match Url::try_from(&*if path.starts_with("/proxy") {
+      format!(
+        "gemini://{}{}",
+        path.replace("/proxy/", ""),
+        if fallback { "/" } else { "" }
+      )
+    } else if path.starts_with("/x") {
+      format!(
+        "gemini://{}{}",
+        path.replace("/x/", ""),
+        if fallback { "/" } else { "" }
+      )
     } else {
       // Try to set `ROOT` as `ROOT` environment variable, or use
       // `"gemini://fuwn.me"` as default.
       format!(
-        "{}{}/",
+        "{}{}{}",
         {
           if let Ok(root) = var("ROOT") {
             root
@@ -242,14 +222,20 @@ async fn default(req: actix_web::HttpRequest) -> Result<HttpResponse, Error> {
             "gemini://fuwn.me".to_string()
           }
         },
-        req.path()
+        path,
+        if fallback { "/" } else { "" }
       )
     }) {
       Ok(url) => url,
-      Err(e) => {
-        return Ok(HttpResponse::Ok().body(e.to_string()));
-      }
-    };
+      Err(e) => return Err(e),
+    },
+  )
+}
+
+#[allow(clippy::unused_async, clippy::future_not_send, clippy::too_many_lines)]
+async fn default(req: actix_web::HttpRequest) -> Result<HttpResponse, Error> {
+  // Try to construct a Gemini URL
+  let url = make_url(req.path(), false).unwrap();
   // Make a request to get Gemini content and time it.
   let mut timer = Instant::now();
   let mut response = match gmi::request::make_request(&url) {
@@ -259,12 +245,13 @@ async fn default(req: actix_web::HttpRequest) -> Result<HttpResponse, Error> {
     }
   };
   if response.data.is_empty() {
-    response = match gmi::request::make_request(&fallback_url) {
-      Ok(response) => response,
-      Err(e) => {
-        return Ok(HttpResponse::Ok().body(e.to_string()));
-      }
-    };
+    response =
+      match gmi::request::make_request(&make_url(req.path(), true).unwrap()) {
+        Ok(response) => response,
+        Err(e) => {
+          return Ok(HttpResponse::Ok().body(e.to_string()));
+        }
+      };
   }
   let response_time_taken = timer.elapsed();
 
