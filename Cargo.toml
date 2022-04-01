@@ -1,0 +1,42 @@
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[package]
+name = "september"
+version = "0.0.0"
+authors = ["Fuwn <fuwnzy@gmail.com>"]
+edition = "2021"
+description = "A simple and efficient Gemini-to-HTTP proxy."
+readme = "README.rst"
+homepage = "https://github.com/gemrest/september"
+repository = "https://github.com/gemrest/september"
+license = "GPL-3.0-only"
+keywords = ["rust", "gemini", "proxy"]
+categories = ["web-programming", "web-programming::http-server"]
+publish = false
+
+# Slower builds, faster executables
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = 3
+
+[dependencies]
+# Gemini
+gmi = "0.2.1"
+
+# HTTP
+actix-web = "4.0.1"
+
+# Logging
+pretty_env_logger = "0.4.0"
+log = "0.4.16"
+
+# Environment Variables
+dotenv = "0.15.0"
+
+[build-dependencies]
+# Environment Variables
+vergen = "7.0.0"
+
+# `Result`
+anyhow = "1.0.56"
