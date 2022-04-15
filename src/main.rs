@@ -131,16 +131,17 @@ fn gemini_to_html(
         response_string.push('\n');
       }
       // Convert lists
-      "*" =>
-        if in_list {
-          response_string.push_str(&format!(
-            "<li>{}</li>\n",
-            line.replace('*', "").trim_start()
-          ));
-        } else {
+      "*" => {
+        if !in_list {
           in_list = true;
           response_string.push_str("<ul>\n");
-        },
+        }
+
+        response_string.push_str(&format!(
+          "<li>{}</li>\n",
+          line.replace('*', "").trim_start()
+        ));
+      }
       // Convert headings
       "#" => {
         if in_list {
