@@ -276,7 +276,19 @@ fn make_url(
 async fn default(req: actix_web::HttpRequest) -> Result<HttpResponse, Error> {
   let mut is_proxy = false;
   // Try to construct a Gemini URL
-  let url = make_url(req.path(), false, &mut is_proxy).unwrap();
+  let url = make_url(
+    &format!("{}{}", req.path(), {
+      if !req.query_string().is_empty() || req.uri().to_string().ends_with('?')
+      {
+        format!("?{}", req.query_string())
+      } else {
+        "".to_string()
+      }
+    }),
+    false,
+    &mut is_proxy,
+  )
+  .unwrap();
   // Make a request to get Gemini content and time it.
   let mut timer = Instant::now();
   let mut response = match gmi::request::make_request(&url) {
