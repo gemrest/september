@@ -33,4 +33,4 @@ args = ["run"]
 [tasks.docker-build]
 dependencies = ["checkfc"]
 command = "docker"
-args = ["build", "-t", "fuwn/september", "."]
+args = ["build", "-t", "fuwn/september:latest", "."]
