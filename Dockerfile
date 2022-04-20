@@ -1,24 +1,40 @@
-FROM rust:latest as builder
+FROM clux/muslrust:nightly-2022-03-08 AS environment
 
-RUN update-ca-certificates
+ENV CHANNEL=nightly-2022-03-08
 
-WORKDIR /september
+RUN curl "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}/rustup-init" -o rustup-init \
+   && chmod +x rustup-init \
+   && ./rustup-init -y --default-toolchain ${CHANNEL} --profile minimal \
+   && rm rustup-init \
+   && ~/.cargo/bin/rustup target add x86_64-unknown-linux-musl \
+   && echo "[build]\ntarget = \"x86_64-unknown-linux-musl\"" > ~/.cargo/config
 
-COPY ./ ./
+FROM environment as builder
+
+WORKDIR /usr/src
+
+RUN cargo new september
+
+WORKDIR /usr/src/september
+
+COPY Cargo.* .
 
 RUN cargo build --release
 
-RUN strip -s /september/target/release/september
+COPY . .
 
-FROM debian:buster-slim
+RUN --mount=type=cache,target=/usr/src/september/target \
+    --mount=type=cache,target=/root/.cargo/registry \
+    cargo build --release --bin september \
+    && strip -s /usr/src/september/target/x86_64-unknown-linux-musl/release/september \
+    && mv /usr/src/september/target/x86_64-unknown-linux-musl/release/september .
 
-COPY --from=builder /etc/passwd /etc/passwd
-COPY --from=builder /etc/group /etc/group
+FROM scratch
 
 WORKDIR /september
 
-COPY --from=builder /september/target/release/september ./
+COPY --from=builder /usr/src/september/september .
 
 EXPOSE 80
 
-CMD ["./september"]
+ENTRYPOINT ["/september/september"]
