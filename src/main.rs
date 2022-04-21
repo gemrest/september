@@ -313,25 +313,29 @@ async fn default(req: actix_web::HttpRequest) -> Result<HttpResponse, Error> {
   timer = Instant::now();
 
   // Convert Gemini Response to HTML and time it.
-  let mut html_context = gemini_to_html(&response, &url, is_proxy);
+  let mut html_context = String::from("<!DOCTYPE html><html><head>");
+  let gemini_html = gemini_to_html(&response, &url, is_proxy);
+  let gemini_title = gemini_html.0;
   let convert_time_taken = timer.elapsed();
 
   // Try to add an external stylesheet from the `CSS_EXTERNAL` environment
   // variable.
   if let Ok(css) = var("CSS_EXTERNAL") {
-    html_context.1.push_str(&format!(
+    html_context.push_str(&format!(
       "<link rel=\"stylesheet\" type=\"text/css\" href=\"{}\">",
       css
     ));
   }
 
   // Add a title to HTML response
-  html_context
-    .1
-    .push_str(&format!("<title>{}</title>", html_context.0));
+  html_context.push_str(&format!("<title>{}</title>", gemini_title));
+
+  html_context.push_str("</head><body>");
+
+  html_context.push_str(&gemini_html.1);
 
   // Add proxy information to footer of HTML response
-  html_context.1.push_str(&format!(
+  html_context.push_str(&format!(
     "<details>\n<summary>Proxy information</summary>
 <dl>
 <dt>Original URL</dt>
@@ -347,7 +351,7 @@ async fn default(req: actix_web::HttpRequest) -> Result<HttpResponse, Error> {
 </dl>
 <p>This content has been proxied by \
 <a href=\"https://github.com/gemrest/september{}\">September ({})</a>.</p>
-</details>",
+</details></body></html>",
     url,
     response.status,
     response.meta,
@@ -361,7 +365,7 @@ async fn default(req: actix_web::HttpRequest) -> Result<HttpResponse, Error> {
   Ok(
     HttpResponse::Ok()
       .content_type("text/html; charset=utf-8")
-      .body(html_context.1),
+      .body(html_context),
   )
 }
 
