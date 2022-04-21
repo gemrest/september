@@ -327,6 +327,15 @@ async fn default(req: actix_web::HttpRequest) -> Result<HttpResponse, Error> {
     ));
   }
 
+  // Try to add an external favicon from the `FAVICON_EXTERNAL` environment
+  // variable.
+  if let Ok(favicon) = var("FAVICON_EXTERNAL") {
+    html_context.push_str(&format!(
+      "<link rel=\"icon\" type=\"image/x-icon\" href=\"{}\">",
+      favicon
+    ));
+  }
+
   // Add a title to HTML response
   html_context.push_str(&format!("<title>{}</title>", gemini_title));
 
