@@ -117,6 +117,14 @@ Defaults to `true`.
 PROXY_BY_DEFAULT=false
 ```
 
+### `FAVICON_EXTERNAL`
+
+An external favicon file to apply to the HTML response.
+
+```dotenv
+FAVICON_EXTERNAL=https://host.fuwn.me/8te8lw0lxm03.webp
+```
+
 ## Capsules using September
 
 [Add yours!](https://github.com/gemrest/september/edit/main/README.md)
