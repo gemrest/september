@@ -9,6 +9,14 @@ RUN curl "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}
    && ~/.cargo/bin/rustup target add x86_64-unknown-linux-musl \
    && echo "[build]\ntarget = \"x86_64-unknown-linux-musl\"" > ~/.cargo/config
 
+RUN cargo install sccache
+
+RUN curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
+    && apt-get update \
+    && apt-get install -y clang
+
+RUN cargo install --git https://github.com/dimensionhq/fleet fleet-rs
+
 FROM environment as builder
 
 WORKDIR /usr/src
@@ -19,13 +27,13 @@ WORKDIR /usr/src/september
 
 COPY Cargo.* .
 
-RUN cargo build --release
+RUN fleet build --release
 
 COPY . .
 
 RUN --mount=type=cache,target=/usr/src/september/target \
     --mount=type=cache,target=/root/.cargo/registry \
-    cargo build --release --bin september \
+    fleet build --release --bin september \
     && strip -s /usr/src/september/target/x86_64-unknown-linux-musl/release/september \
     && mv /usr/src/september/target/x86_64-unknown-linux-musl/release/september .
 
