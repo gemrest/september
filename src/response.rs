@@ -1,0 +1,129 @@
+// This file is part of September <https://github.com/gemrest/september>.
+// Copyright (C) 2022-2022 Fuwn <contact@fuwn.me>
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, version 3.
+//
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <http://www.gnu.org/licenses/>.
+//
+// Copyright (C) 2022-2022 Fuwn <contact@fuwn.me>
+// SPDX-License-Identifier: GPL-3.0-only
+
+use std::{env::var, time::Instant};
+
+use actix_web::{Error, HttpResponse};
+
+use crate::url::make as make_url;
+
+#[allow(clippy::unused_async, clippy::future_not_send, clippy::too_many_lines)]
+pub async fn default(
+  req: actix_web::HttpRequest,
+) -> Result<HttpResponse, Error> {
+  let mut is_proxy = false;
+  // Try to construct a Gemini URL
+  let url = make_url(
+    &format!("{}{}", req.path(), {
+      if !req.query_string().is_empty() || req.uri().to_string().ends_with('?')
+      {
+        format!("?{}", req.query_string())
+      } else {
+        "".to_string()
+      }
+    }),
+    false,
+    &mut is_proxy,
+  )
+  .unwrap();
+  // Make a request to get Gemini content and time it.
+  let mut timer = Instant::now();
+  let mut response = match gmi::request::make_request(&url) {
+    Ok(response) => response,
+    Err(e) => {
+      return Ok(HttpResponse::Ok().body(e.to_string()));
+    }
+  };
+  if response.data.is_empty() {
+    response = match gmi::request::make_request(
+      &make_url(req.path(), true, &mut is_proxy).unwrap(),
+    ) {
+      Ok(response) => response,
+      Err(e) => {
+        return Ok(HttpResponse::Ok().body(e.to_string()));
+      }
+    };
+  }
+  let response_time_taken = timer.elapsed();
+
+  // Reset timer for below
+  timer = Instant::now();
+
+  // Convert Gemini Response to HTML and time it.
+  let mut html_context = String::from("<!DOCTYPE html><html><head>");
+  let gemini_html =
+    crate::gemini_to_html::gemini_to_html(&response, &url, is_proxy);
+  let gemini_title = gemini_html.0;
+  let convert_time_taken = timer.elapsed();
+
+  // Try to add an external stylesheet from the `CSS_EXTERNAL` environment
+  // variable.
+  if let Ok(css) = var("CSS_EXTERNAL") {
+    html_context.push_str(&format!(
+      "<link rel=\"stylesheet\" type=\"text/css\" href=\"{}\">",
+      css
+    ));
+  }
+
+  // Try to add an external favicon from the `FAVICON_EXTERNAL` environment
+  // variable.
+  if let Ok(favicon) = var("FAVICON_EXTERNAL") {
+    html_context.push_str(&format!(
+      "<link rel=\"icon\" type=\"image/x-icon\" href=\"{}\">",
+      favicon
+    ));
+  }
+
+  // Add a title to HTML response
+  html_context.push_str(&format!("<title>{}</title>", gemini_title));
+  html_context.push_str("</head><body>");
+  html_context.push_str(&gemini_html.1);
+  // Add proxy information to footer of HTML response
+  html_context.push_str(&format!(
+    "<details>\n<summary>Proxy information</summary>
+<dl>
+<dt>Original URL</dt>
+<dd><a href=\"{}\">{0}</a></dd>
+<dt>Status code</dt>
+<dd>{:?}</dd>
+<dt>Meta</dt>
+<dd>{}</dd>
+<dt>Capsule response time</dt>
+<dd>{} milliseconds</dd>
+<dt>Gemini-to-HTML time</dt>
+<dd>{} milliseconds</dd>
+</dl>
+<p>This content has been proxied by \
+<a href=\"https://github.com/gemrest/september{}\">September ({})</a>.</p>
+</details></body></html>",
+    url,
+    response.status,
+    response.meta,
+    response_time_taken.as_nanos() as f64 / 1_000_000.0,
+    convert_time_taken.as_nanos() as f64 / 1_000_000.0,
+    format_args!("/tree/{}", env!("VERGEN_GIT_SHA")),
+    env!("VERGEN_GIT_SHA").get(0..5).unwrap_or("UNKNOWN"),
+  ));
+
+  // Return HTML response
+  Ok(
+    HttpResponse::Ok()
+      .content_type("text/html; charset=utf-8")
+      .body(html_context),
+  )
+}
