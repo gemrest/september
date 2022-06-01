@@ -34,6 +34,7 @@ extern crate log;
 use std::{env::var, time::Instant};
 
 use actix_web::{web, Error, HttpResponse};
+use germ::ast::Node;
 use gmi::{protocol::Response, url::Url};
 
 fn link_from_host_href(url: &Url, href: &str) -> String {
@@ -51,25 +52,23 @@ fn link_from_host_href(url: &Url, href: &str) -> String {
   )
 }
 
-#[allow(clippy::too_many_lines)]
 fn gemini_to_html(
   response: &Response,
   url: &Url,
   is_proxy: bool,
 ) -> (String, String) {
-  let mut response_string = String::new();
-  let mut in_block = false;
-  let mut in_list = false;
-  let mut title = String::new();
+  let ast = germ::ast::build(&String::from_utf8_lossy(&response.data));
+  let mut html = String::new();
+  let mut title = "".to_string();
 
-  for line in String::from_utf8_lossy(&response.data).to_string().lines() {
-    match line.get(0..1).unwrap_or("") {
-      // Convert links
-      "=" => {
-        let line = line.replace("=>", "").trim_start().to_owned();
-        let mut split = line.split_whitespace().collect::<Vec<_>>();
-        let mut href = split.remove(0).to_string();
-        let text = split.join(" ");
+  for node in ast {
+    match node {
+      Node::Text(text) => html.push_str(&format!("<p>{}</p>", text)),
+      Node::Link {
+        to,
+        text,
+      } => {
+        let mut href = to.clone();
 
         if href.starts_with('/') || !href.contains("://") {
           href = link_from_host_href(url, &href);
@@ -77,7 +76,7 @@ fn gemini_to_html(
 
         if var("PROXY_BY_DEFAULT").unwrap_or_else(|_| "true".to_string())
           == "true"
-          && href.contains("gemini://")
+          && to.contains("gemini://")
         {
           if is_proxy
             || href
@@ -118,109 +117,52 @@ fn gemini_to_html(
           }
         }
 
-        response_string
-          .push_str(&format!("<p><a href=\"{}\">{}</a></p>\n", href, text));
-      }
-      // Add whitespace
-      "" => {
-        if in_list {
-          in_list = false;
-          response_string.push_str("</ul>\n");
-        }
-
-        response_string.push('\n');
-      }
-      // Convert lists
-      "*" => {
-        if !in_list {
-          in_list = true;
-          response_string.push_str("<ul>\n");
-        }
-
-        response_string.push_str(&format!(
-          "<li>{}</li>\n",
-          line.replace('*', "").trim_start()
+        html.push_str(&format!(
+          "<p><a href=\"{}\">{}</a></p>\n",
+          href,
+          text.unwrap_or(to)
         ));
       }
-      // Convert headings
-      "#" => {
-        if in_list {
-          in_list = false;
-          response_string.push_str("</ul>\n");
+      Node::Heading {
+        level,
+        text,
+      } => {
+        if title.is_empty() && level == 1 {
+          title = text.clone();
         }
 
-        match line.get(0..3) {
-          Some(heading) =>
-            match heading {
-              "###" => {
-                response_string.push_str(&format!(
-                  "<h3>{}</h3>",
-                  line.replace("###", "").trim_start()
-                ));
-              }
-              _ =>
-                if heading.starts_with("##") {
-                  response_string.push_str(&format!(
-                    "<h2>{}</h2>",
-                    line.replace("##", "").trim_start()
-                  ));
-                } else {
-                  let fixed_line =
-                    line.replace('#', "").trim_start().to_owned();
-
-                  response_string.push_str(&format!("<h1>{}</h1>", fixed_line));
-
-                  if title.is_empty() {
-                    title = fixed_line;
-                  }
-                },
-            },
-          None => {}
-        }
-      }
-      // Convert blockquotes
-      ">" => {
-        if in_list {
-          in_list = false;
-          response_string.push_str("</ul>\n");
-        }
-
-        response_string.push_str(&format!(
-          "<blockquote>{}</blockquote>\n",
-          line.replace('>', "").trim_start()
+        html.push_str(&format!(
+          "<{}>{}</{0}>",
+          match level {
+            1 => "h1",
+            2 => "h2",
+            3 => "h3",
+            _ => "p",
+          },
+          text
         ));
       }
-      // Convert preformatted blocks
-      "`" => {
-        if in_list {
-          in_list = false;
-          response_string.push_str("</ul>\n");
-        }
-
-        in_block = !in_block;
-        if in_block {
-          response_string.push_str("<pre>\n");
-        } else {
-          response_string.push_str("</pre>\n");
-        }
+      Node::List(items) =>
+        html.push_str(&format!(
+          "<ul>{}</ul>",
+          items
+            .into_iter()
+            .map(|i| format!("<li>{}</li>", i))
+            .collect::<Vec<String>>()
+            .join("\n")
+        )),
+      Node::Blockquote(text) =>
+        html.push_str(&format!("<blockquote>{}</blockquote>", text)),
+      Node::PreformattedText {
+        text, ..
+      } => {
+        html.push_str(&format!("<pre>{}</pre>", text));
       }
-      // Add text lines
-      _ => {
-        if in_list {
-          in_list = false;
-          response_string.push_str("</ul>\n");
-        }
-
-        if in_block {
-          response_string.push_str(&format!("{}\n", line));
-        } else {
-          response_string.push_str(&format!("<p>{}</p>", line));
-        }
-      }
+      Node::Whitespace => {}
     }
   }
 
-  (title, response_string)
+  (title, html)
 }
 
 fn make_url(
