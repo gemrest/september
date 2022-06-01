@@ -125,6 +125,14 @@ An external favicon file to apply to the HTML response.
 FAVICON_EXTERNAL=https://host.fuwn.me/8te8lw0lxm03.webp
 ```
 
+## Styling
+
+Want to give your website a shiny new look? Try using one of sources
+to find a stylish and **minimal** (!!) CSS theme/ framework!
+
+- [dohliam/dropin-minimal-css](https://github.com/dohliam/dropin-minimal-css): Drop-in switcher for previewing minimal CSS frameworks
+- [dbohdan/classless-css](https://github.com/dbohdan/classless-css): A list of classless CSS themes/frameworks with screenshots
+
 ## Capsules using September
 
 [Add yours!](https://github.com/gemrest/september/edit/main/README.md)
