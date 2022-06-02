@@ -125,6 +125,14 @@ An external favicon file to apply to the HTML response.
 FAVICON_EXTERNAL=https://host.fuwn.me/8te8lw0lxm03.webp
 ```
 
+### `PLAIN_TEXT_ROUTE`
+
+A comma-seperated list of paths to treat as plain text routes.
+
+```dotenv
+PLAIN_TEXT_ROUTE=/robots.txt,/license.txt
+```
+
 ## Styling
 
 Want to give your website a shiny new look? Try using one of sources
