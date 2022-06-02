@@ -120,7 +120,15 @@ pub async fn default(
     env!("VERGEN_GIT_SHA").get(0..5).unwrap_or("UNKNOWN"),
   ));
 
-  // Return HTML response
+  if let Ok(plain_texts) = var("PLAIN_TEXT_ROUTE") {
+    if plain_texts.split(',').any(|r| r == req.path()) {
+      return Ok(
+        HttpResponse::Ok()
+          .body(String::from_utf8_lossy(&response.data).to_string()),
+      );
+    }
+  }
+
   Ok(
     HttpResponse::Ok()
       .content_type("text/html; charset=utf-8")
