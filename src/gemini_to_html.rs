@@ -60,7 +60,7 @@ pub fn gemini_to_html(
 
         if var("PROXY_BY_DEFAULT").unwrap_or_else(|_| "true".to_string())
           == "true"
-          && to.contains("gemini://")
+          && href.contains("gemini://")
         {
           if is_proxy
             || href
@@ -104,7 +104,7 @@ pub fn gemini_to_html(
         html.push_str(&format!(
           "<p><a href=\"{}\">{}</a></p>\n",
           href,
-          text.unwrap_or(to)
+          text.unwrap_or_else(|| "".to_string())
         ));
       }
       Node::Heading {
