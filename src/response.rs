@@ -92,7 +92,13 @@ pub async fn default(
   // Add a title to HTML response
   html_context.push_str(&format!("<title>{}</title>", gemini_title));
   html_context.push_str("</head><body>");
-  html_context.push_str(&gemini_html.1);
+
+  match response.status {
+    gmi::protocol::StatusCode::Success(_) =>
+      html_context.push_str(&gemini_html.1),
+    _ => html_context.push_str(&format!("<p>{}</p>", response.meta)),
+  }
+
   // Add proxy information to footer of HTML response
   html_context.push_str(&format!(
     "<details>\n<summary>Proxy information</summary>
