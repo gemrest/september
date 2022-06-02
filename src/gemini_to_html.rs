@@ -41,7 +41,9 @@ pub fn gemini_to_html(
   url: &Url,
   is_proxy: bool,
 ) -> (String, String) {
-  let ast = germ::ast::build(&String::from_utf8_lossy(&response.data));
+  let ast_tree =
+    germ::ast::Ast::from_string(&String::from_utf8_lossy(&response.data));
+  let ast = ast_tree.inner();
   let mut html = String::new();
   let mut title = "".to_string();
 
@@ -104,14 +106,14 @@ pub fn gemini_to_html(
         html.push_str(&format!(
           "<p><a href=\"{}\">{}</a></p>\n",
           href,
-          text.unwrap_or_else(|| "".to_string())
+          text.clone().unwrap_or_else(|| "".to_string())
         ));
       }
       Node::Heading {
         level,
         text,
       } => {
-        if title.is_empty() && level == 1 {
+        if title.is_empty() && *level == 1 {
           title = text.clone();
         }
 
@@ -130,7 +132,7 @@ pub fn gemini_to_html(
         html.push_str(&format!(
           "<ul>{}</ul>",
           items
-            .into_iter()
+            .iter()
             .map(|i| format!("<li>{}</li>", i))
             .collect::<Vec<String>>()
             .join("\n")
