@@ -15,7 +15,7 @@ RUN curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
     && apt-get update \
     && apt-get install -y clang
 
-RUN cargo install --git https://github.com/dimensionhq/fleet fleet-rs
+# RUN cargo install --git https://github.com/dimensionhq/fleet fleet-rs
 
 FROM environment as builder
 
@@ -27,13 +27,14 @@ WORKDIR /usr/src/september
 
 COPY Cargo.* .
 
-RUN fleet build --release
+# RUN fleet build --release
+RUN cargo build --release
 
 COPY . .
 
 RUN --mount=type=cache,target=/usr/src/september/target \
     --mount=type=cache,target=/root/.cargo/registry \
-    fleet build --release --bin september \
+    cargo build --release --bin september \
     && strip -s /usr/src/september/target/x86_64-unknown-linux-musl/release/september \
     && mv /usr/src/september/target/x86_64-unknown-linux-musl/release/september .
 
