@@ -56,8 +56,11 @@ pub fn gemini_to_html(
         text,
       } => {
         let mut href = to.clone();
+        let mut surface = false;
 
-        if !href.starts_with("gemini://") && !href.starts_with('/') {
+        if href.contains("://") && !href.starts_with("gemini://") {
+          surface = true;
+        } else if !href.starts_with("gemini://") && !href.starts_with('/') {
           href = format!("./{}", href);
         } else if href.starts_with('/') || !href.contains("://") {
           href = link_from_host_href(url, &href);
@@ -66,6 +69,7 @@ pub fn gemini_to_html(
         if var("PROXY_BY_DEFAULT").unwrap_or_else(|_| "true".to_string())
           == "true"
           && href.contains("gemini://")
+          && !surface
         {
           if is_proxy
             || href
@@ -88,7 +92,7 @@ pub fn gemini_to_html(
         if let Ok(keeps) = var("KEEP_GEMINI_EXACT") {
           let mut keeps = keeps.split(',');
 
-          if href.starts_with('/') || !href.contains("://") {
+          if (href.starts_with('/') || !href.contains("://")) && !surface {
             let temporary_href = link_from_host_href(url, &href);
 
             if keeps.any(|k| k == &*temporary_href) {
@@ -98,9 +102,10 @@ pub fn gemini_to_html(
         }
 
         if let Ok(keeps) = var("KEEP_GEMINI_DOMAIN") {
-          if href.starts_with('/')
+          if (href.starts_with('/')
             || !href.contains("://")
-              && keeps.split(',').any(|k| k == &*url.authority.host)
+              && keeps.split(',').any(|k| k == &*url.authority.host))
+            && !surface
           {
             href = link_from_host_href(url, &href);
           }
