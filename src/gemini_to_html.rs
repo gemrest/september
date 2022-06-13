@@ -36,6 +36,7 @@ fn link_from_host_href(url: &Url, href: &str) -> String {
   )
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn gemini_to_html(
   response: &gmi::protocol::Response,
   url: &Url,
@@ -56,7 +57,9 @@ pub fn gemini_to_html(
       } => {
         let mut href = to.clone();
 
-        if href.starts_with('/') || !href.contains("://") {
+        if !href.starts_with("gemini://") && !href.starts_with('/') {
+          href = format!("./{}", href);
+        } else if href.starts_with('/') || !href.contains("://") {
           href = link_from_host_href(url, &href);
         }
 
