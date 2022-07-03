@@ -22,6 +22,7 @@ pub fn make(
   path: &str,
   fallback: bool,
   is_proxy: &mut bool,
+  is_raw: &mut bool,
 ) -> Result<Url, gmi::url::UrlParseError> {
   Ok(
     match Url::try_from(&*if path.starts_with("/proxy") {
@@ -38,6 +39,15 @@ pub fn make(
       format!(
         "gemini://{}{}",
         path.replace("/x/", ""),
+        if fallback { "/" } else { "" }
+      )
+    } else if path.starts_with("/raw") {
+      *is_proxy = true;
+      *is_raw = true;
+
+      format!(
+        "gemini://{}{}",
+        path.replace("/raw/", ""),
         if fallback { "/" } else { "" }
       )
     } else {
