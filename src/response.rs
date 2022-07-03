@@ -27,6 +27,7 @@ pub async fn default(
   req: actix_web::HttpRequest,
 ) -> Result<HttpResponse, Error> {
   let mut is_proxy = false;
+  let mut is_raw = false;
   // Try to construct a Gemini URL
   let url = make_url(
     &format!("{}{}", req.path(), {
@@ -39,6 +40,7 @@ pub async fn default(
     }),
     false,
     &mut is_proxy,
+    &mut is_raw,
   )
   .unwrap();
   // Make a request to get Gemini content and time it.
@@ -51,7 +53,7 @@ pub async fn default(
   };
   if response.data.is_empty() {
     response = match gmi::request::make_request(
-      &make_url(req.path(), true, &mut is_proxy).unwrap(),
+      &make_url(req.path(), true, &mut is_proxy, &mut is_raw).unwrap(),
     ) {
       Ok(response) => response,
       Err(e) => {
@@ -60,16 +62,46 @@ pub async fn default(
     };
   }
   let response_time_taken = timer.elapsed();
+  let meta = germ::meta::Meta::from_string(&response.meta);
+  let charset = meta
+    .parameters()
+    .get("charset")
+    .map_or_else(|| "utf-8".to_string(), ToString::to_string);
+  let language = meta
+    .parameters()
+    .get("lang")
+    .map_or_else(|| "".to_string(), ToString::to_string);
 
   // Reset timer for below
   timer = Instant::now();
 
   // Convert Gemini Response to HTML and time it.
-  let mut html_context = String::from("<!DOCTYPE html><html><head>");
+  let mut html_context = if is_raw {
+    String::new()
+  } else {
+    format!(
+      "<!DOCTYPE html><html{}><head>",
+      if language.is_empty() {
+        "".to_string()
+      } else {
+        format!(" lang=\"{}\"", language)
+      }
+    )
+  };
   let gemini_html =
     crate::gemini_to_html::gemini_to_html(&response, &url, is_proxy);
   let gemini_title = gemini_html.0;
   let convert_time_taken = timer.elapsed();
+
+  if is_raw {
+    html_context.push_str(&String::from_utf8_lossy(&response.data));
+
+    return Ok(
+      HttpResponse::Ok()
+        .content_type(format!("{}; charset={}", meta.mime(), charset))
+        .body(html_context),
+    );
+  }
 
   // Try to add an external stylesheet from the `CSS_EXTERNAL` environment
   // variable.
@@ -101,14 +133,12 @@ pub async fn default(
 
   // Add proxy information to footer of HTML response
   html_context.push_str(&format!(
-    "<details>\n<summary>Proxy information</summary>
+      "<details>\n<summary>Proxy information</summary>
 <dl>
-<dt>Original URL</dt>
-<dd><a href=\"{}\">{0}</a></dd>
+<dt>Original URL</dt><dd><a href=\"{}\">{0}</a></dd>
 <dt>Status code</dt>
 <dd>{:?}</dd>
-<dt>Meta</dt>
-<dd>{}</dd>
+<dt>Meta</dt><dd>{}</dd>
 <dt>Capsule response time</dt>
 <dd>{} milliseconds</dd>
 <dt>Gemini-to-HTML time</dt>
@@ -117,14 +147,14 @@ pub async fn default(
 <p>This content has been proxied by \
 <a href=\"https://github.com/gemrest/september{}\">September ({})</a>.</p>
 </details></body></html>",
-    url,
-    response.status,
-    response.meta,
-    response_time_taken.as_nanos() as f64 / 1_000_000.0,
-    convert_time_taken.as_nanos() as f64 / 1_000_000.0,
-    format_args!("/tree/{}", env!("VERGEN_GIT_SHA")),
-    env!("VERGEN_GIT_SHA").get(0..5).unwrap_or("UNKNOWN"),
-  ));
+      url,
+      response.status,
+      response.meta,
+      response_time_taken.as_nanos() as f64 / 1_000_000.0,
+      convert_time_taken.as_nanos() as f64 / 1_000_000.0,
+      format_args!("/tree/{}", env!("VERGEN_GIT_SHA")),
+      env!("VERGEN_GIT_SHA").get(0..5).unwrap_or("UNKNOWN"),
+    ));
 
   if let Ok(plain_texts) = var("PLAIN_TEXT_ROUTE") {
     if plain_texts.split(',').any(|r| r == req.path()) {
@@ -137,7 +167,7 @@ pub async fn default(
 
   Ok(
     HttpResponse::Ok()
-      .content_type("text/html; charset=utf-8")
+      .content_type(format!("text/html; charset={}", charset))
       .body(html_context),
   )
 }
