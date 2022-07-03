@@ -28,6 +28,7 @@ pub async fn default(
 ) -> Result<HttpResponse, Error> {
   let mut is_proxy = false;
   let mut is_raw = false;
+  let mut is_nocss = false;
   // Try to construct a Gemini URL
   let url = match make_url(
     &format!("{}{}", req.path(), {
@@ -41,6 +42,7 @@ pub async fn default(
     false,
     &mut is_proxy,
     &mut is_raw,
+    &mut is_nocss,
   ) {
     Ok(url) => url,
     Err(e) => {
@@ -65,6 +67,7 @@ pub async fn default(
       true,
       &mut is_proxy,
       &mut is_raw,
+      &mut is_nocss,
     ) {
       Ok(url) => url,
       Err(e) => {
@@ -119,6 +122,16 @@ pub async fn default(
     return Ok(
       HttpResponse::Ok()
         .content_type(format!("{}; charset={}", meta.mime(), charset))
+        .body(html_context),
+    );
+  }
+
+  if is_nocss {
+    html_context.push_str(&gemini_html.1);
+
+    return Ok(
+      HttpResponse::Ok()
+        .content_type(format!("text/html; charset={}", meta.mime()))
         .body(html_context),
     );
   }
