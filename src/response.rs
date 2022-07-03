@@ -61,6 +61,7 @@ pub async fn default(
       return Ok(HttpResponse::Ok().body(e.to_string()));
     }
   };
+
   if response.data.is_empty() {
     response = match gmi::request::make_request(&match make_url(
       req.path(),
@@ -84,6 +85,7 @@ pub async fn default(
       }
     };
   }
+
   let response_time_taken = timer.elapsed();
   let meta = germ::meta::Meta::from_string(&response.meta);
   let charset = meta
