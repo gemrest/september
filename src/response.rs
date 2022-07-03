@@ -29,7 +29,7 @@ pub async fn default(
   let mut is_proxy = false;
   let mut is_raw = false;
   // Try to construct a Gemini URL
-  let url = make_url(
+  let url = match make_url(
     &format!("{}{}", req.path(), {
       if !req.query_string().is_empty() || req.uri().to_string().ends_with('?')
       {
@@ -41,8 +41,16 @@ pub async fn default(
     false,
     &mut is_proxy,
     &mut is_raw,
-  )
-  .unwrap();
+  ) {
+    Ok(url) => url,
+    Err(e) => {
+      return Ok(
+        HttpResponse::BadRequest()
+          .content_type("text/plain")
+          .body(format!("{}", e)),
+      );
+    }
+  };
   // Make a request to get Gemini content and time it.
   let mut timer = Instant::now();
   let mut response = match gmi::request::make_request(&url) {
@@ -52,9 +60,21 @@ pub async fn default(
     }
   };
   if response.data.is_empty() {
-    response = match gmi::request::make_request(
-      &make_url(req.path(), true, &mut is_proxy, &mut is_raw).unwrap(),
+    response = match gmi::request::make_request(&match make_url(
+      req.path(),
+      true,
+      &mut is_proxy,
+      &mut is_raw,
     ) {
+      Ok(url) => url,
+      Err(e) => {
+        return Ok(
+          HttpResponse::BadRequest()
+            .content_type("text/plain")
+            .body(format!("{}", e)),
+        );
+      }
+    }) {
       Ok(response) => response,
       Err(e) => {
         return Ok(HttpResponse::Ok().body(e.to_string()));
