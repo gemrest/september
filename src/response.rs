@@ -36,7 +36,7 @@ pub async fn default(
       {
         format!("?{}", req.query_string())
       } else {
-        "".to_string()
+        String::new()
       }
     }),
     false,
@@ -49,7 +49,7 @@ pub async fn default(
       return Ok(
         HttpResponse::BadRequest()
           .content_type("text/plain")
-          .body(format!("{}", e)),
+          .body(format!("{e}")),
       );
     }
   };
@@ -75,7 +75,7 @@ pub async fn default(
         return Ok(
           HttpResponse::BadRequest()
             .content_type("text/plain")
-            .body(format!("{}", e)),
+            .body(format!("{e}")),
         );
       }
     }) {
@@ -95,7 +95,7 @@ pub async fn default(
   let language = meta
     .parameters()
     .get("lang")
-    .map_or_else(|| "".to_string(), ToString::to_string);
+    .map_or_else(String::new, ToString::to_string);
 
   // Reset timer for below
   timer = Instant::now();
@@ -107,9 +107,9 @@ pub async fn default(
     format!(
       "<!DOCTYPE html><html{}><head>",
       if language.is_empty() {
-        "".to_string()
+        String::new()
       } else {
-        format!(" lang=\"{}\"", language)
+        format!(" lang=\"{language}\"")
       }
     )
   };
@@ -123,7 +123,7 @@ pub async fn default(
 
     return Ok(
       HttpResponse::Ok()
-        .content_type(format!("{}; charset={}", meta.mime(), charset))
+        .content_type(format!("{}; charset={charset}", meta.mime()))
         .body(html_context),
     );
   }
@@ -157,18 +157,19 @@ pub async fn default(
   }
 
   // Add a title to HTML response
-  html_context.push_str(&format!("<title>{}</title>", gemini_title));
+  html_context.push_str(&format!("<title>{gemini_title}</title>"));
   html_context.push_str("</head><body>");
 
   match response.status {
-    gmi::protocol::StatusCode::Success(_) =>
-      html_context.push_str(&gemini_html.1),
+    gmi::protocol::StatusCode::Success(_) => {
+      html_context.push_str(&gemini_html.1);
+    }
     _ => html_context.push_str(&format!("<p>{}</p>", response.meta)),
   }
 
   // Add proxy information to footer of HTML response
   html_context.push_str(&format!(
-      "<details>\n<summary>Proxy information</summary>
+    "<details>\n<summary>Proxy information</summary>
 <dl>
 <dt>Original URL</dt><dd><a href=\"{}\">{0}</a></dd>
 <dt>Status code</dt>
@@ -182,14 +183,14 @@ pub async fn default(
 <p>This content has been proxied by \
 <a href=\"https://github.com/gemrest/september{}\">September ({})</a>.</p>
 </details></body></html>",
-      url,
-      response.status,
-      response.meta,
-      response_time_taken.as_nanos() as f64 / 1_000_000.0,
-      convert_time_taken.as_nanos() as f64 / 1_000_000.0,
-      format_args!("/tree/{}", env!("VERGEN_GIT_SHA")),
-      env!("VERGEN_GIT_SHA").get(0..5).unwrap_or("UNKNOWN"),
-    ));
+    url,
+    response.status,
+    response.meta,
+    response_time_taken.as_nanos() as f64 / 1_000_000.0,
+    convert_time_taken.as_nanos() as f64 / 1_000_000.0,
+    format_args!("/tree/{}", env!("VERGEN_GIT_SHA")),
+    env!("VERGEN_GIT_SHA").get(0..5).unwrap_or("UNKNOWN"),
+  ));
 
   if let Ok(plain_texts) = var("PLAIN_TEXT_ROUTE") {
     if plain_texts.split(',').any(|r| r == req.path()) {
@@ -202,7 +203,7 @@ pub async fn default(
 
   Ok(
     HttpResponse::Ok()
-      .content_type(format!("text/html; charset={}", charset))
+      .content_type(format!("text/html; charset={charset}"))
       .body(html_context),
   )
 }
