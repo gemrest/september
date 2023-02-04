@@ -34,9 +34,6 @@ log = "0.4.16"
 # Environment Variables
 dotenv = "0.15.0"
 
-# HTML Entity-encode Text
-htmlescape = "0.3.1"
-
 [build-dependencies]
 # Environment Variables
 vergen = "7.0.0"
