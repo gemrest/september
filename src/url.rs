@@ -66,16 +66,17 @@ pub fn make(
       format!(
         "{}{}{}",
         {
-          if let Ok(root) = std::env::var("ROOT") {
-            root
-          } else {
-            warn!(
-              "could not use ROOT from environment variables, proceeding with \
-               default root: gemini://fuwn.me"
-            );
+          std::env::var("ROOT").map_or_else(
+            |_| {
+              warn!(
+                "could not use ROOT from environment variables, proceeding \
+                 with default root: gemini://fuwn.me"
+              );
 
-            "gemini://fuwn.me".to_string()
-          }
+              "gemini://fuwn.me".to_string()
+            },
+            |root| root,
+          )
         },
         path,
         if fallback { "/" } else { "" }
