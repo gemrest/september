@@ -64,7 +64,7 @@ pub fn gemini_to_html(
           href = link_from_host_href(url, &href);
         }
 
-        if var("PROXY_BY_DEFAULT").unwrap_or_else(|_| "true".to_string())
+        if var("PROXY_BY_DEFAULT").unwrap_or_else(|_| "true".to_string()).to_lowercase()
           == "true"
           && href.contains("gemini://")
           && !surface
