@@ -64,19 +64,15 @@ async fn main() -> std::io::Result<()> {
     "0.0.0.0",
     // If the `PORT` environment variable is present, try to use it, otherwise;
     // use port `80`.
-    if let Ok(port) = var("PORT") {
-      match port.parse::<_>() {
-        Ok(port) => port,
-        Err(e) => {
-          warn!("could not use PORT from environment variables: {}", e);
-          warn!("proceeding with default port: 80");
+    var("PORT").map_or(80, |port| match port.parse::<_>() {
+      Ok(port) => port,
+      Err(e) => {
+        warn!("could not use PORT from environment variables: {}", e);
+        warn!("proceeding with default port: 80");
 
-          80
-        }
+        80
       }
-    } else {
-      80
-    },
+    }),
   ))?
   .run()
   .await

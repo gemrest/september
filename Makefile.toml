@@ -5,6 +5,7 @@
 command = "cargo"
 args = ["fmt"]
 private = true
+toolchain = "nightly"
 
 [tasks.check]
 command = "cargo"
