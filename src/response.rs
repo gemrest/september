@@ -156,9 +156,15 @@ pub async fn default(
     ));
   }
 
-  if var("MATHJAX").unwrap_or_else(|_| "true".to_string()).to_lowercase() == "true" {
+  if var("MATHJAX")
+    .unwrap_or_else(|_| "true".to_string())
+    .to_lowercase()
+    == "true"
+  {
     html_context.push_str(
-      "<script type=\"#text/javascript\" id=\"MathJax-script\" async src=\"https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js\"></script>",
+      r#"<script type="text/javascript" id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>"#,
     );
   }
 
