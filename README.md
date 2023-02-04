@@ -133,6 +133,16 @@ A comma-seperated list of paths to treat as plain text routes.
 PLAIN_TEXT_ROUTE=/robots.txt,/license.txt
 ```
 
+### `MATHJAX`
+
+Enable MathJax support for rendering LaTeX.
+
+Defaults to `false`.
+
+```dotenv
+MATHJAX=true
+```
+
 ## Styling
 
 Want to give your website a shiny new look? Try using one of sources
