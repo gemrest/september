@@ -34,6 +34,9 @@ log = "0.4.16"
 # Environment Variables
 dotenv = "0.15.0"
 
+# Markdown to HTML
+markly = "0.3.0"
+
 [build-dependencies]
 # Environment Variables
 vergen = "7.0.0"

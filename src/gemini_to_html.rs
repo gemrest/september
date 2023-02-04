@@ -20,6 +20,7 @@ use std::env::var;
 
 use germ::ast::Node;
 use gmi::url::Url;
+use markly::to_html;
 
 fn link_from_host_href(url: &Url, href: &str) -> String {
   format!(
@@ -50,7 +51,7 @@ pub fn gemini_to_html(
 
   for node in ast {
     match node {
-      Node::Text(text) => html.push_str(&format!("<p>{text}</p>")),
+      Node::Text(text) => html.push_str(&format!("<p>{}</p>", to_html(text))),
       Node::Link { to, text } => {
         let mut href = to.clone();
         let mut surface = false;
@@ -111,7 +112,7 @@ pub fn gemini_to_html(
         html.push_str(&format!(
           "<p><a href=\"{}\">{}</a></p>\n",
           href,
-          text.clone().unwrap_or_default()
+          to_html(&text.clone().unwrap_or_default())
         ));
       }
       Node::Heading { level, text } => {
@@ -127,19 +128,19 @@ pub fn gemini_to_html(
             3 => "h3",
             _ => "p",
           },
-          text
+          to_html(text)
         ));
       }
       Node::List(items) => html.push_str(&format!(
         "<ul>{}</ul>",
         items
           .iter()
-          .map(|i| format!("<li>{i}</li>"))
+          .map(|i| format!("<li>{}</li>", to_html(i)))
           .collect::<Vec<String>>()
           .join("\n")
       )),
       Node::Blockquote(text) => {
-        html.push_str(&format!("<blockquote>{text}</blockquote>"));
+        html.push_str(&format!("<blockquote>{}</blockquote>", to_html(text)));
       }
       Node::PreformattedText { text, .. } => {
         html.push_str(&format!("<pre>{text}</pre>"));
