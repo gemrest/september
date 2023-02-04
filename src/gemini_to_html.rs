@@ -20,7 +20,14 @@ use std::env::var;
 
 use germ::ast::Node;
 use gmi::url::Url;
-use markly::to_html;
+
+fn to_html(text: &str) -> String {
+  if text.contains('$') {
+    text.to_string()
+  } else {
+    markly::to_html(text)
+  }
+}
 
 fn link_from_host_href(url: &Url, href: &str) -> String {
   format!(
@@ -64,7 +71,9 @@ pub fn gemini_to_html(
           href = link_from_host_href(url, &href);
         }
 
-        if var("PROXY_BY_DEFAULT").unwrap_or_else(|_| "true".to_string()).to_lowercase()
+        if var("PROXY_BY_DEFAULT")
+          .unwrap_or_else(|_| "true".to_string())
+          .to_lowercase()
           == "true"
           && href.contains("gemini://")
           && !surface
