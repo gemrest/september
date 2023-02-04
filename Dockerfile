@@ -1,6 +1,6 @@
-FROM clux/muslrust:nightly-2022-03-08 AS environment
+FROM clux/muslrust:1.66.0 AS environment
 
-ENV CHANNEL=nightly-2022-03-08
+ENV CHANNEL=1.66.0
 
 RUN curl "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}/rustup-init" -o rustup-init \
    && chmod +x rustup-init \
@@ -11,8 +11,10 @@ RUN curl "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}
 
 RUN cargo install sccache
 
+RUN apt-get update \
+    && apt-get install -y gnupg2
+
 RUN curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
-    && apt-get update \
     && apt-get install -y clang
 
 # RUN cargo install --git https://github.com/dimensionhq/fleet fleet-rs
