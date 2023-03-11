@@ -26,6 +26,20 @@ use crate::url::make as make_url;
 pub async fn default(
   req: actix_web::HttpRequest,
 ) -> Result<HttpResponse, Error> {
+  if vec![
+    "/proxy", "/proxy/", "/x", "/x/", "/raw", "/raw/", "/nocss", "/nocss/",
+  ]
+  .contains(&req.path())
+  {
+    return Ok(
+      HttpResponse::Ok()
+        .content_type("text/html")
+        .body(r#"<pre>This is a proxy path. Please specify a Gemini URL without the "gemini://" to proxy.
+
+For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".</pre>"#),
+    );
+  }
+
   let mut is_proxy = false;
   let mut is_raw = false;
   let mut is_nocss = false;
