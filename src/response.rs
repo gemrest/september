@@ -141,10 +141,15 @@ pub async fn default(
   // Try to add an external stylesheet from the `CSS_EXTERNAL` environment
   // variable.
   if let Ok(css) = var("CSS_EXTERNAL") {
-    html_context.push_str(&format!(
-      "<link rel=\"stylesheet\" type=\"text/css\" href=\"{}\">",
-      css
-    ));
+    let stylesheets =
+      css.split(',').filter(|s| !s.is_empty()).collect::<Vec<_>>();
+
+    for stylesheet in stylesheets {
+      html_context.push_str(&format!(
+        "<link rel=\"stylesheet\" type=\"text/css\" href=\"{}\">",
+        stylesheet,
+      ));
+    }
   }
 
   // Try to add an external favicon from the `FAVICON_EXTERNAL` environment

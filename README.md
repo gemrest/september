@@ -72,7 +72,7 @@ ROOT=gemini://fuwn.me
 
 ### `CSS_EXTERNAL`
 
-An external CSS file to apply to the HTML response.
+A comma-seperated list of external CSS files to apply to the HTML response.
 
 If no `CSS_EXTERNAL` is provided, there will be no styling done to the HTML
 response.
