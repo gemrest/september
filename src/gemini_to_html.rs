@@ -121,7 +121,7 @@ pub fn gemini_to_html(
         html.push_str(&format!(
           "<p><a href=\"{}\">{}</a></p>\n",
           href,
-          to_html(&text.clone().unwrap_or_default())
+          text.clone().unwrap_or_default(),
         ));
       }
       Node::Heading { level, text } => {
