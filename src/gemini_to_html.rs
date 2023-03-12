@@ -22,10 +22,21 @@ use germ::ast::Node;
 use gmi::url::Url;
 
 fn to_html(text: &str) -> String {
-  if text.contains('$') {
+  let html = if text.contains('$') {
     text.to_string()
   } else {
     markly::to_html(text)
+  };
+
+  if (html.ends_with("</p>") || html.ends_with("</p>\n"))
+    && html.starts_with("<p>")
+  {
+    html
+      .trim_start_matches("<p>")
+      .trim_end_matches("</p>")
+      .to_string()
+  } else {
+    html
   }
 }
 
@@ -137,7 +148,7 @@ pub fn gemini_to_html(
             3 => "h3",
             _ => "p",
           },
-          to_html(text)
+          to_html(text),
         ));
       }
       Node::List(items) => html.push_str(&format!(
