@@ -2,7 +2,7 @@
 
 [package]
 name = "september"
-version = "0.2.4"
+version = "0.2.5"
 authors = ["Fuwn <fuwnzy@gmail.com>"]
 edition = "2021"
 description = "A simple and efficient Gemini-to-HTTP proxy."
@@ -33,9 +33,6 @@ log = "0.4.16"
 
 # Environment Variables
 dotenv = "0.15.0"
-
-# Markdown to HTML
-markly = "0.3.0"
 
 [build-dependencies]
 # Environment Variables
