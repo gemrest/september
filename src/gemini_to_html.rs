@@ -21,25 +21,6 @@ use std::env::var;
 use germ::ast::Node;
 use gmi::url::Url;
 
-fn to_html(text: &str) -> String {
-  let html = if text.contains('$') {
-    text.to_string()
-  } else {
-    markly::to_html(text)
-  };
-
-  if (html.ends_with("</p>") || html.ends_with("</p>\n"))
-    && html.starts_with("<p>")
-  {
-    html
-      .trim_start_matches("<p>")
-      .trim_end_matches("</p>")
-      .to_string()
-  } else {
-    html
-  }
-}
-
 fn link_from_host_href(url: &Url, href: &str) -> String {
   format!(
     "gemini://{}{}{}",
@@ -69,7 +50,7 @@ pub fn gemini_to_html(
 
   for node in ast {
     match node {
-      Node::Text(text) => html.push_str(&format!("<p>{}</p>", to_html(text))),
+      Node::Text(text) => html.push_str(&format!("<p>{text}</p>")),
       Node::Link { to, text } => {
         let mut href = to.clone();
         let mut surface = false;
@@ -148,24 +129,26 @@ pub fn gemini_to_html(
             3 => "h3",
             _ => "p",
           },
-          to_html(text),
+          text,
         ));
       }
       Node::List(items) => html.push_str(&format!(
         "<ul>{}</ul>",
         items
           .iter()
-          .map(|i| format!("<li>{}</li>", to_html(i)))
+          .map(|i| format!("<li>{i}</li>"))
           .collect::<Vec<String>>()
           .join("\n")
       )),
       Node::Blockquote(text) => {
-        html.push_str(&format!("<blockquote>{}</blockquote>", to_html(text)));
+        html.push_str(&format!("<blockquote>{text}</blockquote>"));
       }
       Node::PreformattedText { text, .. } => {
         html.push_str(&format!("<pre>{text}</pre>"));
       }
-      Node::Whitespace => {}
+      Node::Whitespace => {
+        println!("i am white");
+      }
     }
   }
 
