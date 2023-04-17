@@ -1,13 +1,13 @@
-FROM clux/muslrust:1.66.0 AS environment
+FROM clux/muslrust:1.68.2 AS environment
 
-ENV CHANNEL=1.66.0
+ENV CHANNEL=1.68.2
 
 RUN curl "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}/rustup-init" -o rustup-init \
-   && chmod +x rustup-init \
-   && ./rustup-init -y --default-toolchain ${CHANNEL} --profile minimal \
-   && rm rustup-init \
-   && ~/.cargo/bin/rustup target add x86_64-unknown-linux-musl \
-   && echo "[build]\ntarget = \"x86_64-unknown-linux-musl\"" > ~/.cargo/config
+    && chmod +x rustup-init \
+    && ./rustup-init -y --default-toolchain ${CHANNEL} --profile minimal \
+    && rm rustup-init \
+    && ~/.cargo/bin/rustup target add x86_64-unknown-linux-musl \
+    && echo "[build]\ntarget = \"x86_64-unknown-linux-musl\"" > ~/.cargo/config
 
 RUN cargo install sccache
 
