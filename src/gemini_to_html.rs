@@ -43,7 +43,7 @@ pub fn gemini_to_html(
   is_proxy: bool,
 ) -> (String, String) {
   let ast_tree =
-    germ::ast::Ast::from_string(&String::from_utf8_lossy(&response.data));
+    germ::ast::Ast::from_string(String::from_utf8_lossy(&response.data));
   let ast = ast_tree.inner();
   let mut html = String::new();
   let mut title = String::new();
