@@ -1,14 +1,17 @@
 # Rust
-target/
+target
 **/*.rs.bk
 Cargo.lock
 
-# IDE
-.idea/
+# CLion
+.idea
 
 # Development
 .env
 
 # Fleet
-.cargo/
+.cargo
 fleet.toml
+
+# Visual Studio Code
+.vscode
