@@ -101,7 +101,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
   }
 
   let response_time_taken = timer.elapsed();
-  let meta = germ::meta::Meta::from_string(&response.meta);
+  let meta = germ::meta::Meta::from_string(response.meta.clone());
   let charset = meta
     .parameters()
     .get("charset")
