@@ -160,8 +160,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
 
     for stylesheet in stylesheets {
       html_context.push_str(&format!(
-        "<link rel=\"stylesheet\" type=\"text/css\" href=\"{}\">",
-        stylesheet,
+        "<link rel=\"stylesheet\" type=\"text/css\" href=\"{stylesheet}\">",
       ));
     }
   }
@@ -170,8 +169,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
   // variable.
   if let Ok(favicon) = var("FAVICON_EXTERNAL") {
     html_context.push_str(&format!(
-      "<link rel=\"icon\" type=\"image/x-icon\" href=\"{}\">",
-      favicon
+      "<link rel=\"icon\" type=\"image/x-icon\" href=\"{favicon}\">",
     ));
   }
 
