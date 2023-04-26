@@ -146,9 +146,7 @@ pub fn gemini_to_html(
       Node::PreformattedText { text, .. } => {
         html.push_str(&format!("<pre>{text}</pre>"));
       }
-      Node::Whitespace => {
-        println!("i am white");
-      }
+      Node::Whitespace => {}
     }
   }
 
