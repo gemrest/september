@@ -31,13 +31,9 @@ mod html;
 mod response;
 mod url;
 
-#[macro_use]
-extern crate log;
+#[macro_use] extern crate log;
 
-use std::env::var;
-
-use actix_web::web;
-use response::default;
+use {actix_web::web, response::default, std::env::var};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
