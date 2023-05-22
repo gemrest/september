@@ -15,21 +15,14 @@
 // Copyright (C) 2022-2023 Fuwn <contact@fuwn.me>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::env::var;
-
-use germ::ast::Node;
-use url::Url;
+use {germ::ast::Node, std::env::var, url::Url};
 
 fn link_from_host_href(url: &Url, href: &str) -> Option<String> {
   Some(format!(
     "gemini://{}{}{}",
     url.domain()?,
     {
-      if href.starts_with('/') {
-        ""
-      } else {
-        "/"
-      }
+      if href.starts_with('/') { "" } else { "/" }
     },
     href
   ))
