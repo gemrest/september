@@ -1,25 +1,16 @@
-# ------------
-# | Wrappers |
-# ------------
 [tasks.fmt]
-command = "cargo"
 args = ["fmt"]
-private = true
+command = "cargo"
 toolchain = "nightly"
 
 [tasks.check]
+args = ["check", "--all-features"]
 command = "cargo"
-args = ["check"]
-private = true
 
 [tasks.clippy]
-command = "cargo"
 args = ["clippy"]
-private = true
+command = "cargo"
 
-# -------------
-# | Executors |
-# -------------
 [tasks.checkf]
 dependencies = ["fmt", "check"]
 
@@ -27,11 +18,12 @@ dependencies = ["fmt", "check"]
 dependencies = ["fmt", "check", "clippy"]
 
 [tasks.run]
-dependencies = ["checkfc"]
-command = "cargo"
 args = ["run"]
+command = "cargo"
+dependencies = ["checkfc"]
 
 [tasks.docker-build]
-dependencies = ["checkfc"]
-command = "docker"
 args = ["build", "-t", "fuwn/september:latest", "."]
+command = "docker"
+dependencies = ["checkfc"]
+
