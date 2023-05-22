@@ -1,6 +1,6 @@
-FROM clux/muslrust:1.68.2 AS environment
+FROM clux/muslrust:1.69.0 AS environment
 
-ENV CHANNEL=1.68.2
+ENV CHANNEL=1.69.0
 
 RUN curl "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}/rustup-init" -o rustup-init \
     && chmod +x rustup-init \
