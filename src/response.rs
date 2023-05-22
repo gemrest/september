@@ -15,11 +15,11 @@
 // Copyright (C) 2022-2023 Fuwn <contact@fuwn.me>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::{env::var, time::Instant};
-
-use actix_web::{Error, HttpResponse};
-
-use crate::url::make as make_url;
+use {
+  crate::url::make as make_url,
+  actix_web::{Error, HttpResponse},
+  std::{env::var, time::Instant},
+};
 
 #[allow(clippy::unused_async, clippy::future_not_send, clippy::too_many_lines)]
 pub async fn default(
@@ -105,10 +105,8 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
     .parameters()
     .get("charset")
     .map_or_else(|| "utf-8".to_string(), ToString::to_string);
-  let language = meta
-    .parameters()
-    .get("lang")
-    .map_or_else(String::new, ToString::to_string);
+  let language =
+    meta.parameters().get("lang").map_or_else(String::new, ToString::to_string);
 
   // Reset timer for below
   timer = Instant::now();
@@ -172,9 +170,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
     ));
   }
 
-  if var("MATHJAX")
-    .unwrap_or_else(|_| "true".to_string())
-    .to_lowercase()
+  if var("MATHJAX").unwrap_or_else(|_| "true".to_string()).to_lowercase()
     == "true"
   {
     html_context.push_str(
