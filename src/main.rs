@@ -27,7 +27,7 @@
 #![recursion_limit = "128"]
 #![allow(clippy::cast_precision_loss)]
 
-mod gemini_to_html;
+mod html;
 mod response;
 mod url;
 

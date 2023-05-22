@@ -36,7 +36,7 @@ fn link_from_host_href(url: &Url, href: &str) -> String {
 }
 
 #[allow(clippy::too_many_lines)]
-pub fn gemini_to_html(
+pub fn from_gemini(
   response: &gmi::protocol::Response,
   url: &Url,
   is_proxy: bool,

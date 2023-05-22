@@ -126,8 +126,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
       }
     )
   };
-  let gemini_html =
-    crate::gemini_to_html::gemini_to_html(&response, &url, is_proxy);
+  let gemini_html = crate::html::from_gemini(&response, &url, is_proxy);
   let gemini_title = gemini_html.0;
   let convert_time_taken = timer.elapsed();
 
