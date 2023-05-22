@@ -21,7 +21,6 @@ opt-level = 3
 
 [dependencies]
 # Gemini
-gmi = "0.2.1"
 germ = { version = "0.3.9", features = ["ast", "meta"] }
 
 # HTTP
@@ -33,6 +32,9 @@ log = "0.4.16"
 
 # Environment Variables
 dotenv = "0.15.0"
+
+# URL Standard
+url = "2.3.1"
 
 [build-dependencies]
 # Environment Variables

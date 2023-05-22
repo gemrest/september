@@ -18,12 +18,12 @@
 use std::env::var;
 
 use germ::ast::Node;
-use gmi::url::Url;
+use url::Url;
 
-fn link_from_host_href(url: &Url, href: &str) -> String {
-  format!(
+fn link_from_host_href(url: &Url, href: &str) -> Option<String> {
+  Some(format!(
     "gemini://{}{}{}",
-    url.authority.host,
+    url.domain()?,
     {
       if href.starts_with('/') {
         ""
@@ -32,17 +32,17 @@ fn link_from_host_href(url: &Url, href: &str) -> String {
       }
     },
     href
-  )
+  ))
 }
 
 #[allow(clippy::too_many_lines)]
 pub fn from_gemini(
-  response: &gmi::protocol::Response,
+  response: &germ::request::Response,
   url: &Url,
   is_proxy: bool,
-) -> (String, String) {
+) -> Option<(String, String)> {
   let ast_tree =
-    germ::ast::Ast::from_string(String::from_utf8_lossy(&response.data));
+    germ::ast::Ast::from_string(response.content().clone().unwrap_or_default());
   let ast = ast_tree.inner();
   let mut html = String::new();
   let mut title = String::new();
@@ -59,7 +59,7 @@ pub fn from_gemini(
         } else if !href.starts_with("gemini://") && !href.starts_with('/') {
           href = format!("./{href}");
         } else if href.starts_with('/') || !href.contains("://") {
-          href = link_from_host_href(url, &href);
+          href = link_from_host_href(url, &href)?;
         }
 
         if var("PROXY_BY_DEFAULT")
@@ -77,13 +77,18 @@ pub fn from_gemini(
               .collect::<Vec<_>>()
               .first()
               .unwrap()
-              != &url.authority.host.as_str()
+              != &url.host().unwrap().to_string().as_str()
           {
             href = format!("/proxy/{}", href.trim_start_matches("gemini://"));
           } else {
-            href = href
-              .trim_start_matches("gemini://")
-              .replace(&url.authority.host, "");
+            href = href.trim_start_matches("gemini://").replace(
+              &if let Some(host) = url.host() {
+                host.to_string()
+              } else {
+                return None;
+              },
+              "",
+            );
           }
         }
 
@@ -91,7 +96,7 @@ pub fn from_gemini(
           let mut keeps = keeps.split(',');
 
           if (href.starts_with('/') || !href.contains("://")) && !surface {
-            let temporary_href = link_from_host_href(url, &href);
+            let temporary_href = link_from_host_href(url, &href)?;
 
             if keeps.any(|k| k == &*temporary_href) {
               href = temporary_href;
@@ -100,12 +105,17 @@ pub fn from_gemini(
         }
 
         if let Ok(keeps) = var("KEEP_GEMINI_DOMAIN") {
+          let host = if let Some(host) = url.host() {
+            host.to_string()
+          } else {
+            return None;
+          };
+
           if (href.starts_with('/')
-            || !href.contains("://")
-              && keeps.split(',').any(|k| k == &*url.authority.host))
+            || !href.contains("://") && keeps.split(',').any(|k| k == &*host))
             && !surface
           {
-            href = link_from_host_href(url, &href);
+            href = link_from_host_href(url, &href)?;
           }
         }
 
@@ -149,5 +159,5 @@ pub fn from_gemini(
     }
   }
 
-  (title, html)
+  Some((title, html))
 }

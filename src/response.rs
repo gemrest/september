@@ -68,15 +68,15 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
   };
   // Make a request to get Gemini content and time it.
   let mut timer = Instant::now();
-  let mut response = match gmi::request::make_request(&url) {
+  let mut response = match germ::request::request(&url) {
     Ok(response) => response,
     Err(e) => {
       return Ok(HttpResponse::Ok().body(e.to_string()));
     }
   };
 
-  if response.data.is_empty() {
-    response = match gmi::request::make_request(&match make_url(
+  if response.content().is_some() {
+    response = match germ::request::request(&match make_url(
       req.path(),
       true,
       &mut is_proxy,
@@ -100,7 +100,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
   }
 
   let response_time_taken = timer.elapsed();
-  let meta = germ::meta::Meta::from_string(response.meta.clone());
+  let meta = germ::meta::Meta::from_string(response.meta().to_string());
   let charset = meta
     .parameters()
     .get("charset")
@@ -126,12 +126,13 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
       }
     )
   };
-  let gemini_html = crate::html::from_gemini(&response, &url, is_proxy);
+  let gemini_html =
+    crate::html::from_gemini(&response, &url, is_proxy).unwrap();
   let gemini_title = gemini_html.0;
   let convert_time_taken = timer.elapsed();
 
   if is_raw {
-    html_context.push_str(&String::from_utf8_lossy(&response.data));
+    html_context.push_str(&response.content().clone().unwrap_or_default());
 
     return Ok(
       HttpResponse::Ok()
@@ -187,11 +188,11 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
   html_context.push_str(&format!("<title>{gemini_title}</title>"));
   html_context.push_str("</head><body>");
 
-  match response.status {
-    gmi::protocol::StatusCode::Success(_) => {
+  match response.status() {
+    germ::request::Status::Success => {
       html_context.push_str(&gemini_html.1);
     }
-    _ => html_context.push_str(&format!("<p>{}</p>", response.meta)),
+    _ => html_context.push_str(&format!("<p>{}</p>", response.meta())),
   }
 
   // Add proxy information to footer of HTML response
@@ -211,8 +212,8 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
 <a href=\"https://github.com/gemrest/september{}\">September ({})</a>.</p>
 </details></body></html>",
     url,
-    response.status,
-    response.meta,
+    response.status(),
+    response.meta(),
     response_time_taken.as_nanos() as f64 / 1_000_000.0,
     convert_time_taken.as_nanos() as f64 / 1_000_000.0,
     format_args!("/tree/{}", env!("VERGEN_GIT_SHA")),
@@ -222,8 +223,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
   if let Ok(plain_texts) = var("PLAIN_TEXT_ROUTE") {
     if plain_texts.split(',').any(|r| r == req.path()) {
       return Ok(
-        HttpResponse::Ok()
-          .body(String::from_utf8_lossy(&response.data).to_string()),
+        HttpResponse::Ok().body(response.content().clone().unwrap_or_default()),
       );
     }
   }

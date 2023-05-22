@@ -15,7 +15,7 @@
 // Copyright (C) 2022-2023 Fuwn <contact@fuwn.me>
 // SPDX-License-Identifier: GPL-3.0-only
 
-use gmi::url::Url;
+use url::Url;
 
 pub fn make(
   path: &str,
@@ -23,7 +23,7 @@ pub fn make(
   is_proxy: &mut bool,
   is_raw: &mut bool,
   is_nocss: &mut bool,
-) -> Result<Url, gmi::url::UrlParseError> {
+) -> Result<Url, url::ParseError> {
   Ok(
     match Url::try_from(&*if path.starts_with("/proxy") {
       *is_proxy = true;
