@@ -16,4 +16,8 @@
 // Copyright (C) 2022-2022 Fuwn <contact@fuwn.me>
 // SPDX-License-Identifier: GPL-3.0-only
 
-fn main() -> anyhow::Result<()> { vergen::vergen(vergen::Config::default()) }
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+  vergen::EmitBuilder::builder().git_sha(true).emit()?;
+
+  Ok(())
+}
