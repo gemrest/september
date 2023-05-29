@@ -143,6 +143,17 @@ Defaults to `false`.
 MATHJAX=true
 ```
 
+### `HEADER`
+
+Adds a large header to the top of a proxy page. Only available in styled
+routes.
+
+Defaults to off.
+
+```dotenv
+HEADER="This will show up at the top of my proxied capsule."
+```
+
 ## Styling
 
 Want to give your website a shiny new look? Try using one of sources
