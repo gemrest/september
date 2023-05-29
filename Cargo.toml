@@ -37,8 +37,8 @@ dotenv = "0.15.0"
 url = "2.3.1"
 
 [build-dependencies]
-# Environment Variables
-vergen = "7.0.0"
+# Compile-time Environment Variables
+vergen = { version = "8.2.1", features = ["git", "gitoxide"] }
 
 # `Result`
 anyhow = "1.0.56"
