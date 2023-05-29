@@ -9,7 +9,7 @@ RUN curl "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}
     && ~/.cargo/bin/rustup target add x86_64-unknown-linux-musl \
     && echo "[build]\ntarget = \"x86_64-unknown-linux-musl\"" > ~/.cargo/config
 
-RUN cargo install sccache
+# RUN cargo install sccache
 
 RUN apt-get update \
     && apt-get install -y gnupg2
