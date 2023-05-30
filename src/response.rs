@@ -184,9 +184,11 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
   html_context.push_str(&format!("<title>{gemini_title}</title>"));
   html_context.push_str("</head><body>");
 
-  if let Ok(header) = var("HEADER") {
-    html_context
-      .push_str(&format!("<big><blockquote>{header}</blockquote></big>"));
+  if !req.path().starts_with("/proxy") {
+    if let Ok(header) = var("HEADER") {
+      html_context
+        .push_str(&format!("<big><blockquote>{header}</blockquote></big>"));
+    }
   }
 
   match response.status() {
