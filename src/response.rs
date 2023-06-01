@@ -77,7 +77,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
 
   if response.content().is_some() {
     response = match germ::request::request(&match make_url(
-      req.path(),
+      req.path().trim_end_matches('/'),
       true,
       &mut is_proxy,
       &mut is_raw,
