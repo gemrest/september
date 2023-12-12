@@ -25,10 +25,8 @@ use {
 pub async fn default(
   req: actix_web::HttpRequest,
 ) -> Result<HttpResponse, Error> {
-  if vec![
-    "/proxy", "/proxy/", "/x", "/x/", "/raw", "/raw/", "/nocss", "/nocss/",
-  ]
-  .contains(&req.path())
+  if ["/proxy", "/proxy/", "/x", "/x/", "/raw", "/raw/", "/nocss", "/nocss/"]
+    .contains(&req.path())
   {
     return Ok(
       HttpResponse::Ok()
