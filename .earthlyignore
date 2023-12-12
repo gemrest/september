@@ -1,0 +1,7 @@
+**
+
+!.git/
+!src/
+!build.rs
+!Cargo.*
+
