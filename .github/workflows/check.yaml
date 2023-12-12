@@ -1,5 +1,4 @@
 name: Check ✅
-
 on:
   workflow_dispatch:
   push:
@@ -8,10 +7,8 @@ on:
   pull_request:
     paths:
       - "*"
-
 env:
   CARGO_TERM_COLOR: always
-
 jobs:
   check:
     name: Check ✅
@@ -19,15 +16,13 @@ jobs:
     steps:
       - name: Checkout 🛒
         uses: actions/checkout@v3
-
       - name: Toolchain 🧰
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.66.0
+          toolchain: 1.73.0
           components: rustfmt, clippy
           override: true
-
       - name: Check ✅
         uses: actions-rs/cargo@v1
         continue-on-error: false
