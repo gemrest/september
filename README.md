@@ -9,7 +9,7 @@ A simple and efficient Gemini-to-HTTP proxy written in Rust.
 ### Docker
 
 ```shell
-$ docker run -d [ -e ROOT="gemini://fuwn.me" ] [ -e PORT="8080"] [ -e CSS_EXTERNAL="https://example.com/style.css"] fuwn/september:latest
+docker run -d [ -e ROOT="gemini://fuwn.me" ] [ -e PORT="8080"] [ -e CSS_EXTERNAL="https://example.com/style.css"] fuwn/september:latest
 ```
 
 ### Docker Compose
@@ -17,13 +17,13 @@ $ docker run -d [ -e ROOT="gemini://fuwn.me" ] [ -e PORT="8080"] [ -e CSS_EXTERN
 Edit the `docker-compose.yaml` file to your liking, and then
 
 ```shell
-$ docker-compose up -d
+docker-compose up -d
 ```
 
 ### Executable
 
 ```shell
-$ [ ROOT="gemini://fuwn.me" ] [ PORT="8080"] [ CSS_EXTERNAL="https://example.com/style.css"] ./september
+[ ROOT="gemini://fuwn.me" ] [ PORT="8080"] [ CSS_EXTERNAL="https://example.com/style.css"] ./september
 ```
 
 or use a `.env` file
@@ -34,12 +34,13 @@ or use a `.env` file
 ROOT=gemini://fuwn.me
 PORT=8080
 CSS_EXTERNAL=https://example.com/style.css
+HEAD=<script>/* september */</script>
 ```
 
 and then
 
 ```shell
-$ ./september
+./september
 ```
 
 ## Configuration
@@ -85,11 +86,19 @@ CSS_EXTERNAL=https://cdnjs.cloudflare.com/ajax/libs/mini.css/3.0.1/mini-default.
 
 Keeps exactly matching URLs as a Gemini URL.
 
+### `HEAD`
+
+Inserts any string at the end of the HTMl `<head>`
+
+```dotenv
+HEAD=<script>/* september */</script>
+```
+
 #### Examples
 
 If `KEEP_GEMINI_EXACT` is equal to `KEEP_GEMINI_EXACT=gemini://fuwn.me/gemini`,
 all routes will be proxied their "/proxy" equivalent (e.g.,
-"https://fuwn.me/proxy/fuwn.me/gopher"), except occurrences of
+"<https://fuwn.me/proxy/fuwn.me/gopher>"), except occurrences of
 "gemini://fuwn.me/skills" will be kept as is.
 
 ```dotenv
