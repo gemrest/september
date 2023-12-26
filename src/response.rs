@@ -178,6 +178,10 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
     );
   }
 
+  if let Ok(head) = var("HEAD") {
+    html_context.push_str(&head);
+  }
+
   // Add a title to HTML response
   html_context.push_str(&format!("<title>{gemini_title}</title>"));
   html_context.push_str("</head><body>");
