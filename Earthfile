@@ -2,7 +2,6 @@ VERSION 0.7
 
 all:
   BUILD +docker
-  BUILD +git
 
 docker:
   ARG tag=latest
@@ -16,11 +15,6 @@ docker:
   CMD ["./september"]
 
   SAVE IMAGE --push fuwn/september:$tag
-
-git:
-  LOCALLY
-
-  RUN git push
 
 deps:
   ARG rustc="1.69.0"
