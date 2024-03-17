@@ -50,6 +50,7 @@ build:
   COPY src src
   COPY build.rs build.rs
   COPY Cargo.* .
+  COPY default.css .
 
   RUN --mount=type=cache,target=/source/september/target \
       --mount=type=cache,target=/root/.cargo/registry \
