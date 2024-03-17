@@ -21,6 +21,8 @@ use {
   std::{env::var, time::Instant},
 };
 
+const CSS: &str = include_str!("../default.css");
+
 #[allow(clippy::unused_async, clippy::future_not_send, clippy::too_many_lines)]
 pub async fn default(
   req: actix_web::HttpRequest,
@@ -158,6 +160,8 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
         "<link rel=\"stylesheet\" type=\"text/css\" href=\"{stylesheet}\">",
       ));
     }
+  } else if !is_nocss {
+    html_context.push_str(&format!(r#"<link rel="stylesheet" href="https://latex.now.sh/style.css"><style>{CSS}</style>"#));
   }
 
   // Try to add an external favicon from the `FAVICON_EXTERNAL` environment
