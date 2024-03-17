@@ -6,6 +6,10 @@ A simple and efficient Gemini-to-HTTP proxy written in Rust.
 
 ## Usage
 
+A production deployment of September can be found at https://fuwn.me, with the root capsule set as [gemini://fuwn.me](gemini://fuwn.me).
+
+You can try proxying any external capsule through the /proxy route: e.g., https://fuwn.me/proxy/geminiprotocol.net/
+
 ### Docker
 
 ```shell
