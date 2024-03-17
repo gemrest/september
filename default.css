@@ -1,0 +1,272 @@
+body {
+  background-color: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-monospace);
+  font-size: 12px;
+  line-height: 1rem;
+}
+
+:root {
+  --bg: var(--base00);
+  --off-bg: var(--base01);
+  --inner-bg: var(--base02);
+  --fg: var(--base04);
+  --off-fg: var(--base04);
+  --muted: var(--base03);
+  --link: var(--base0D);
+  --hover: var(--base0E);
+  --highlight: var(--base0D);
+  --logo: var(--base0D);
+  --font-monospace: "Fira Mono", monospace;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-size: 12px;
+  margin: 1.5rem 0 0 0;
+  font-weight: 600;
+}
+
+h1 + h2,
+h1 + h3,
+h1 + h4,
+h1 + h5,
+h1 + h6,
+h2 + h3,
+h2 + h4,
+h2 + h5,
+h2 + h6,
+h3 + h4,
+h3 + h5,
+h3 + h6,
+h4 + h5,
+h4 + h6,
+h5 + h6 {
+  margin: 0;
+}
+
+h1:before {
+  content: "# ";
+}
+h2:before {
+  content: "## ";
+}
+h3:before {
+  content: "### ";
+}
+h4:before {
+  content: "#### ";
+}
+h5:before {
+  content: "##### ";
+}
+h6:before {
+  content: "###### ";
+}
+
+h1:before,
+h2:before,
+h3:before,
+h4:before,
+h5:before,
+h6:before {
+  color: var(--muted);
+}
+
+h1:first-child {
+  margin-top: 0;
+}
+
+p {
+  margin: 0 0 1.5rem 0;
+}
+
+a:link,
+a:visited {
+  color: var(--link);
+}
+
+a:hover,
+a:active,
+a.active {
+  color: var(--hover);
+}
+
+ul {
+  margin: 0 0 1.5rem 0;
+  padding-left: 1.25rem;
+}
+
+ol {
+  margin: 0 0 1.5rem 0;
+  padding-left: 1.75rem;
+}
+
+ul ul,
+ul ol,
+ol ul,
+ol ol {
+  margin: 0;
+}
+
+ul li::marker {
+  content: "∗\00A0";
+  color: var(--muted);
+}
+
+ol li::marker {
+  color: var(--muted);
+}
+
+dt {
+  margin: 0;
+  font-weight: bold;
+}
+
+dd {
+  margin: 0 0 0 1.5rem;
+  font-style: italic;
+}
+
+dd + dt {
+  margin-top: 1.5rem;
+}
+
+dl {
+  margin: 0 0 1.5rem 0;
+}
+
+blockquote {
+  position: relative;
+  margin: 0 0 1.5rem 1.5rem;
+}
+
+blockquote::before {
+  position: absolute;
+  left: -1.5rem;
+  content: ">";
+  color: var(--muted);
+}
+
+pre,
+code,
+kbd,
+samp {
+  background: var(--inner-bg) !important;
+  font-family: var(--font-monospace);
+  color: var(--off-fg);
+}
+
+pre {
+  overflow-x: auto;
+  padding: 1.5rem;
+  margin: 0 0 1.5rem 0;
+}
+
+b,
+strong {
+  font-weight: 600;
+}
+
+::selection,
+mark {
+  background-color: var(--highlight);
+  color: var(--bg);
+}
+
+hr {
+  border: 0;
+  margin-bottom: 1.5rem;
+}
+
+hr:after {
+  content: "---";
+  color: var(--muted);
+}
+
+sup,
+sub {
+  vertical-align: baseline;
+  position: relative;
+  top: -0.25rem;
+  font-size: unset;
+}
+sub {
+  top: 0.25rem;
+}
+
+table {
+  border-spacing: 0;
+  margin: 0 0 1.5rem 0;
+  overflow-wrap: anywhere;
+}
+th,
+td {
+  padding: 0 0.75rem;
+  vertical-align: top;
+}
+th:first-child,
+td:first-child {
+  padding-left: 0;
+}
+th {
+  text-align: inherit;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+:root {
+  --base00: #f8f8f8;
+  --base001: #ffffff;
+  --base0011: #ffffff80;
+  --base01: #e8e8e8;
+  --base02: #d8d8d8;
+  --base03: #b8b8b8;
+  --base04: #585858;
+  --base05: #383838;
+  --base06: #282828;
+  --base07: #181818;
+  --base08: #ab4642;
+  --base09: #dc9656;
+  --base0A: #f7ca88;
+  --base0B: #a1b56c;
+  --base0C: #86c1b9;
+  --base0D: #7cafc2;
+  --base0E: #ba8baf;
+  --base0F: #a16946;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --base00: #080808;
+    --base001: #0c0c0c;
+    --base0011: #0c0c0c80;
+    --base01: #181818;
+    --base02: #282828;
+    --base03: #484848;
+    --base04: #a8a8a8;
+    --base05: #c8c8c8;
+    --base06: #d8d8d8;
+    --base07: #f8f8f8;
+    --base08: #9a4541;
+    --base09: #cb9555;
+    --base0A: #f6c987;
+    --base0B: #a0b45b;
+    --base0C: #85c0b8;
+    --base0D: #7baeb1;
+    --base0E: #b98aae;
+    --base0F: #a06845;
+  }
+}
+
+* {
+  transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out,
+    border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
