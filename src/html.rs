@@ -37,10 +37,11 @@ pub fn from_gemini(
   let ast = ast_tree.inner();
   let mut html = String::new();
   let mut title = String::new();
+  let safe = html_escape::encode_text;
 
   for node in ast {
     match node {
-      Node::Text(text) => html.push_str(&format!("<p>{text}</p>")),
+      Node::Text(text) => html.push_str(&format!("<p>{}</p>", safe(text))),
       Node::Link { to, text } => {
         let mut href = to.clone();
         let mut surface = false;
@@ -113,12 +114,12 @@ pub fn from_gemini(
         html.push_str(&format!(
           "<p><a href=\"{}\">{}</a></p>\n",
           href,
-          text.clone().unwrap_or_default(),
+          safe(&text.clone().unwrap_or_default()),
         ));
       }
       Node::Heading { level, text } => {
         if title.is_empty() && *level == 1 {
-          title = text.clone();
+          title = safe(&text.clone()).to_string();
         }
 
         html.push_str(&format!(
@@ -129,7 +130,7 @@ pub fn from_gemini(
             3 => "h3",
             _ => "p",
           },
-          text,
+          safe(text),
         ));
       }
       Node::List(items) => html.push_str(&format!(
@@ -141,10 +142,10 @@ pub fn from_gemini(
           .join("\n")
       )),
       Node::Blockquote(text) => {
-        html.push_str(&format!("<blockquote>{text}</blockquote>"));
+        html.push_str(&format!("<blockquote>{}</blockquote>", safe(text)));
       }
       Node::PreformattedText { text, .. } => {
-        html.push_str(&format!("<pre>{text}</pre>"));
+        html.push_str(&format!("<pre>{}</pre>", safe(text)));
       }
       Node::Whitespace => {}
     }
