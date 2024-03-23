@@ -73,13 +73,14 @@ pub fn from_gemini(
           {
             href = format!("/proxy/{}", href.trim_start_matches("gemini://"));
           } else {
-            href = href.trim_start_matches("gemini://").replace(
+            href = href.trim_start_matches("gemini://").replacen(
               &if let Some(host) = url.host() {
                 host.to_string()
               } else {
                 return None;
               },
               "",
+              1,
             );
           }
         }
