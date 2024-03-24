@@ -201,6 +201,20 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
     germ::request::Status::Success => {
       html_context.push_str(&gemini_html.1);
     }
+    germ::request::Status::PermanentRedirect => {
+      html_context.push_str(&format!(
+        "<p>This page permanently redirects to <a href=\"{}\">{}</a>.</p>",
+        response.meta(),
+        response.meta().trim()
+      ));
+    }
+    germ::request::Status::TemporaryRedirect => {
+      html_context.push_str(&format!(
+        "<p>This page temporarily redirects to <a href=\"{}\">{}</a>.</p>",
+        response.meta(),
+        response.meta().trim()
+      ));
+    }
     _ => html_context.push_str(&format!("<p>{}</p>", response.meta())),
   }
 

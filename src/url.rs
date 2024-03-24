@@ -25,6 +25,7 @@ pub fn make(
   is_nocss: &mut bool,
 ) -> Result<Url, url::ParseError> {
   Ok(
+    #[allow(clippy::blocks_in_conditions)]
     match Url::try_from(&*if path.starts_with("/proxy") {
       *is_proxy = true;
 
