@@ -206,7 +206,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
 
   // Add proxy information to footer of HTML response
   html_context.push_str(&format!(
-    "<details>\n<summary>Proxy information</summary>
+    "<details>\n<summary>Proxy Information</summary>
 <dl>
 <dt>Original URL</dt><dd><a href=\"{}\">{0}</a></dd>
 <dt>Status code</dt>
