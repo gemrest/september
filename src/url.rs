@@ -17,7 +17,7 @@
 
 use url::Url;
 
-pub fn make(
+pub fn from_path(
   path: &str,
   fallback: bool,
   is_proxy: &mut bool,
