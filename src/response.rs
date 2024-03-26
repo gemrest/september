@@ -16,7 +16,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use {
-  crate::url::make as make_url,
+  crate::url::from_path as url_from_path,
   actix_web::{Error, HttpResponse},
   std::{env::var, time::Instant},
 };
@@ -43,7 +43,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
   let mut is_raw = false;
   let mut is_nocss = false;
   // Try to construct a Gemini URL
-  let url = match make_url(
+  let url = match url_from_path(
     &format!("{}{}", req.path(), {
       if !req.query_string().is_empty() || req.uri().to_string().ends_with('?')
       {
@@ -76,7 +76,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
   };
 
   if response.content().is_some() {
-    response = match germ::request::request(&match make_url(
+    response = match germ::request::request(&match url_from_path(
       req.path().trim_end_matches('/'),
       true,
       &mut is_proxy,
