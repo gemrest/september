@@ -201,19 +201,51 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
     germ::request::Status::Success => {
       html_context.push_str(&gemini_html.1);
     }
-    germ::request::Status::PermanentRedirect => {
+    germ::request::Status::PermanentRedirect
+    | germ::request::Status::TemporaryRedirect => {
       html_context.push_str(&format!(
-        "<p>This page permanently redirects to <a href=\"{}\">{}</a>.</p>",
+        "<blockquote>This page {} redirects to <a \
+         href=\"{}\">{}</a>.</blockquote>",
+        if response.status() == &germ::request::Status::PermanentRedirect {
+          "permanently"
+        } else {
+          "temporarily"
+        },
         response.meta(),
         response.meta().trim()
       ));
-    }
-    germ::request::Status::TemporaryRedirect => {
-      html_context.push_str(&format!(
-        "<p>This page temporarily redirects to <a href=\"{}\">{}</a>.</p>",
-        response.meta(),
-        response.meta().trim()
-      ));
+
+      let redirect_url = match url_from_path(
+        response.meta().trim_end_matches('/'),
+        true,
+        &mut is_proxy,
+        &mut is_raw,
+        &mut is_nocss,
+      ) {
+        Ok(url) => url,
+        Err(e) => {
+          return Ok(
+            HttpResponse::BadRequest()
+              .content_type("text/plain")
+              .body(format!("{e}")),
+          );
+        }
+      };
+
+      html_context.push_str(
+        &crate::html::from_gemini(
+          &match germ::request::request(&redirect_url) {
+            Ok(response) => response,
+            Err(e) => {
+              return Ok(HttpResponse::Ok().body(e.to_string()));
+            }
+          },
+          &redirect_url,
+          is_proxy,
+        )
+        .unwrap()
+        .1,
+      );
     }
     _ => html_context.push_str(&format!("<p>{}</p>", response.meta())),
   }
