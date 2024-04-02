@@ -112,7 +112,7 @@ pub fn from_gemini(
           }
         }
 
-        if var("EMBED_IMAGES").is_ok() {
+        if let Ok(embed_images) = var("EMBED_IMAGES") {
           if let Some(extension) = std::path::Path::new(&href).extension() {
             if extension == "png"
               || extension == "jpg"
@@ -121,11 +121,16 @@ pub fn from_gemini(
               || extension == "webp"
               || extension == "svg"
             {
+              if embed_images == "1" {
+                html.push_str(&format!(
+                  "<p><a href=\"{}\">{}</a> <i>Embedded below</i></p>\n",
+                  href,
+                  safe(&text.clone().unwrap_or_default()),
+                ));
+              }
+
               html.push_str(&format!(
-                "<p><a href=\"{}\">{}</a> <i>Embedded below</i></p>\n<p><img \
-                 src=\"{}\" alt=\"{}\" /></p>\n",
-                href,
-                safe(&text.clone().unwrap_or_default()),
+                "<p><img src=\"{}\" alt=\"{}\" /></p>\n",
                 safe(&href),
                 safe(&text.clone().unwrap_or_default())
               ));
