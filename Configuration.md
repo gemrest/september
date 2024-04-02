@@ -116,8 +116,10 @@ HEADER="This string will show up at the top of my proxied capsule."
 
 Embed images in the HTML response if a link to an image is found
 
-Any non-empty value will enable this feature.
+A value of `1` will enable this feature, while keeping link to the image.
+
+Any non-empty value other than `1` will enable this feature, while removing the link to the image.
 
 ```dotenv
-EMBED_IMAGES=true
+EMBED_IMAGES=2
 ```
