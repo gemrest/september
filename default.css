@@ -1,11 +1,3 @@
-body {
-  background-color: var(--bg);
-  color: var(--fg);
-  font-family: var(--font-monospace);
-  font-size: 12px;
-  line-height: 1rem;
-}
-
 :root {
   --bg: var(--base00);
   --off-bg: var(--base01);
@@ -18,6 +10,15 @@ body {
   --highlight: var(--base0D);
   --logo: var(--base0D);
   --font-monospace: "Fira Mono", monospace;
+  --font-size: 13.5px;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-monospace);
+  font-size: var(--font-size);
+  line-height: 1rem;
 }
 
 h1,
@@ -26,7 +27,7 @@ h3,
 h4,
 h5,
 h6 {
-  font-size: 12px;
+  font-size: var(--font-size);
   margin: 1.5rem 0 0 0;
   font-weight: 600;
 }
