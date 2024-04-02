@@ -112,6 +112,29 @@ pub fn from_gemini(
           }
         }
 
+        if var("EMBED_IMAGES").is_ok() {
+          if let Some(extension) = std::path::Path::new(&href).extension() {
+            if extension == "png"
+              || extension == "jpg"
+              || extension == "jpeg"
+              || extension == "gif"
+              || extension == "webp"
+              || extension == "svg"
+            {
+              html.push_str(&format!(
+                "<p><a href=\"{}\">{}</a> <i>Embedded below</i></p>\n<p><img \
+                 src=\"{}\" alt=\"{}\" /></p>\n",
+                href,
+                safe(&text.clone().unwrap_or_default()),
+                safe(&href),
+                safe(&text.clone().unwrap_or_default())
+              ));
+
+              continue;
+            }
+          }
+        }
+
         html.push_str(&format!(
           "<p><a href=\"{}\">{}</a></p>\n",
           href,
