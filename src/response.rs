@@ -255,12 +255,12 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
     "<details>\n<summary>Proxy Information</summary>
 <dl>
 <dt>Original URL</dt><dd><a href=\"{}\">{0}</a></dd>
-<dt>Status code</dt>
-<dd>{:?}</dd>
-<dt>Meta</dt><dd>{}</dd>
-<dt>Capsule response time</dt>
+<dt>Status Code</dt>
+<dd>{} ({})</dd>
+<dt>Meta</dt><dd><code>{}</code></dd>
+<dt>Capsule Response Time</dt>
 <dd>{} milliseconds</dd>
-<dt>Gemini-to-HTML time</dt>
+<dt>Gemini-to-HTML Time</dt>
 <dd>{} milliseconds</dd>
 </dl>
 <p>This content has been proxied by \
@@ -268,6 +268,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
 </details></body></html>",
     url,
     response.status(),
+    i32::from(response.status().clone()),
     response.meta(),
     response_time_taken.as_nanos() as f64 / 1_000_000.0,
     convert_time_taken.as_nanos() as f64 / 1_000_000.0,
