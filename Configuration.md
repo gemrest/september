@@ -123,3 +123,24 @@ Any non-empty value other than `1` will enable this feature, while removing the 
 ```dotenv
 EMBED_IMAGES=2
 ```
+
+## `CONDENSE_LINKS`
+
+Condense adjacent links to a single line
+
+A value of `*` will condense all adjacent links to a single line.
+
+A comma-separated list of paths will condense adjacent links to a single line only on those paths.
+
+### Example
+
+```plaintext
+<!-- Not condensed -->
+
+<p><a href="/">Link</a></p>
+<p><a href="/">Link</a></p>
+<p><a href="/">Link</a></p>
+
+<!-- Condensed -->
+<p><a href="/">Link</a> | <a href="/">Link</a> | <a href="/">Link</a></p>
+```

@@ -26,7 +26,7 @@ fn link_from_host_href(url: &Url, href: &str) -> Option<String> {
   ))
 }
 
-#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
 pub fn from_gemini(
   response: &germ::request::Response,
   url: &Url,
@@ -38,8 +38,32 @@ pub fn from_gemini(
   let mut html = String::new();
   let mut title = String::new();
   let safe = html_escape::encode_text;
+  let mut previous_link = false;
+  let condense_links = {
+    let links = var("CONDENSE_LINKS").map_or_else(
+      |_| vec![],
+      |condense_links| {
+        condense_links
+          .split(',')
+          .map(std::string::ToString::to_string)
+          .collect()
+      },
+    );
+
+    links.contains(&url.path().to_string()) || links.contains(&"*".to_string())
+  };
 
   for node in ast {
+    if previous_link && (!matches!(node, Node::Link { .. }) || !condense_links)
+    {
+      html.push_str("\n</p>");
+      previous_link = false;
+    } else if previous_link {
+      html.push_str(" <span style=\"opacity: 50%;\">|</span> ");
+    } else if !previous_link && matches!(node, Node::Link { .. }) {
+      html.push_str("<p>");
+    }
+
     match node {
       Node::Text(text) => html.push_str(&format!("<p>{}</p>", safe(text))),
       Node::Link { to, text } => {
@@ -140,8 +164,10 @@ pub fn from_gemini(
           }
         }
 
+        previous_link = true;
+
         html.push_str(&format!(
-          "<p><a href=\"{}\">{}</a></p>\n",
+          "<a href=\"{}\">{}</a>",
           href,
           safe(&text.clone().unwrap_or_default()),
         ));
