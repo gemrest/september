@@ -68,7 +68,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
   };
   // Make a request to get Gemini content and time it.
   let mut timer = Instant::now();
-  let mut response = match germ::request::request(&url) {
+  let mut response = match germ::request::request(&url).await {
     Ok(response) => response,
     Err(e) => {
       return Ok(HttpResponse::Ok().body(e.to_string()));
@@ -91,7 +91,9 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
             .body(format!("{e}")),
         );
       }
-    }) {
+    })
+    .await
+    {
       Ok(response) => response,
       Err(e) => {
         return Ok(HttpResponse::Ok().body(e.to_string()));
@@ -234,7 +236,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
 
       html_context.push_str(
         &crate::html::from_gemini(
-          &match germ::request::request(&redirect_url) {
+          &match germ::request::request(&redirect_url).await {
             Ok(response) => response,
             Err(e) => {
               return Ok(HttpResponse::Ok().body(e.to_string()));
