@@ -66,17 +66,14 @@ pub fn from_path(
       format!(
         "{}{}{}",
         {
-          std::env::var("ROOT").map_or_else(
-            |_| {
-              warn!(
-                "could not use ROOT from environment variables, proceeding \
-                 with default root: gemini://fuwn.me"
-              );
+          std::env::var("ROOT").unwrap_or_else(|_| {
+            warn!(
+              "could not use ROOT from environment variables, proceeding with \
+               default root: gemini://fuwn.me"
+            );
 
-              "gemini://fuwn.me".to_string()
-            },
-            |root| root,
-          )
+            "gemini://fuwn.me".to_string()
+          })
         },
         path,
         if fallback { "/" } else { "" }
