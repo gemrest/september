@@ -144,3 +144,19 @@ A comma-separated list of paths will condense adjacent links to a single line on
 <!-- Condensed -->
 <p><a href="/">Link</a> | <a href="/">Link</a> | <a href="/">Link</a></p>
 ```
+
+## `PRIMARY_COLOUR`
+
+Set the primary colour of elements in the default stylesheet. This field
+controls the colour of items such as links and highlights.
+
+Popular choices are `var(--base0D)` for a blue, or `var(--base09)` for an
+amber colour.
+
+### Examples
+
+```plaintext
+PRIMARY_COLOUR=var(--base09)
+PRIMARY_COLOUR=red
+PRIMARY_COLOUR=#ff0000
+```
