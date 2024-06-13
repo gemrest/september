@@ -164,6 +164,14 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
     }
   } else if !is_nocss {
     html_context.push_str(&format!(r#"<link rel="stylesheet" href="https://latex.now.sh/style.css"><style>{CSS}</style>"#));
+
+    if let Ok(primary) = var("PRIMARY_COLOUR") {
+      html_context
+        .push_str(&format!("<style>:root {{ --primary: {primary} }}</style>"));
+    } else {
+      html_context
+        .push_str("<style>:root { --primary: var(--base0D); }</style>");
+    }
   }
 
   // Try to add an external favicon from the `FAVICON_EXTERNAL` environment
@@ -256,17 +264,21 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
   html_context.push_str(&format!(
     "<details>\n<summary>Proxy Information</summary>
 <dl>
-<dt>Original URL</dt><dd><a href=\"{}\">{0}</a></dd>
+<dt>Original URL</dt><dd><a \
+     href=\"{}\">{0}</a></dd>
 <dt>Status Code</dt>
 <dd>{} ({})</dd>
-<dt>Meta</dt><dd><code>{}</code></dd>
+<dt>Meta</dt><dd><code>{}</code></dd>\
+     
 <dt>Capsule Response Time</dt>
 <dd>{} milliseconds</dd>
-<dt>Gemini-to-HTML Time</dt>
+<dt>Gemini-to-HTML \
+     Time</dt>
 <dd>{} milliseconds</dd>
 </dl>
-<p>This content has been proxied by \
-<a href=\"https://github.com/gemrest/september{}\">September ({})</a>.</p>
+<p>This content has been proxied \
+     by <a href=\"https://github.com/gemrest/september{}\">September \
+     ({})</a>.</p>
 </details></body></html>",
     url,
     response.status(),

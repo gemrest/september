@@ -5,10 +5,10 @@
   --fg: var(--base04);
   --off-fg: var(--base04);
   --muted: var(--base03);
-  --link: var(--base0D);
+  --link: var(--primary);
   --hover: var(--base0E);
-  --highlight: var(--base0D);
-  --logo: var(--base0D);
+  --highlight: var(--primary);
+  --logo: var(--primary);
   --font-monospace: "Fira Mono", monospace;
   --font-size: 13.5px;
 }
@@ -89,12 +89,14 @@ p {
 a:link,
 a:visited {
   color: var(--link);
+  text-decoration: none;
 }
 
 a:hover,
 a:active,
 a.active {
-  color: var(--hover);
+  background-color: var(--link);
+  color: var(--bg);
 }
 
 ul {
@@ -267,7 +269,7 @@ img {
   }
 }
 
-* {
+/* * {
   transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out,
     border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-}
+} */
