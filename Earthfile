@@ -17,7 +17,7 @@ docker:
   SAVE IMAGE --push fuwn/september:$tag
 
 deps:
-  ARG rustc="1.69.0"
+  ARG rustc="1.73.0"
 
   FROM clux/muslrust:$rustc
 
