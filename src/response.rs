@@ -291,7 +291,10 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
   ));
 
   if let Ok(plain_texts) = var("PLAIN_TEXT_ROUTE") {
-    if plain_texts.split(',').any(|r| r == req.path()) {
+    if plain_texts.split(',').any(|r| {
+      path_matches_pattern(r, req.path())
+        || path_matches_pattern(r, req.path().trim_end_matches('/'))
+    }) {
       return Ok(
         HttpResponse::Ok().body(response.content().clone().unwrap_or_default()),
       );
@@ -303,4 +306,37 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
       .content_type(format!("text/html; charset={charset}"))
       .body(html_context),
   )
+}
+
+fn path_matches_pattern(pattern: &str, path: &str) -> bool {
+  let parts: Vec<&str> = pattern.split('*').collect();
+  let mut position = 0;
+
+  if !pattern.starts_with('*') {
+    if let Some(part) = parts.first() {
+      if !path.starts_with(part) {
+        return false;
+      }
+
+      position = part.len();
+    }
+  }
+
+  for part in &parts[1..parts.len() - 1] {
+    if let Some(found_position) = path[position..].find(part) {
+      position += found_position + part.len();
+    } else {
+      return false;
+    }
+  }
+
+  if !pattern.ends_with('*') {
+    if let Some(part) = parts.last() {
+      if !path[position..].ends_with(part) {
+        return false;
+      }
+    }
+  }
+
+  true
 }
