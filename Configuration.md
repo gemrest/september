@@ -88,8 +88,11 @@ FAVICON_EXTERNAL=https://example.com/favicon.ico
 
 A comma-separated list of paths to treat as plain text routes
 
+These patterns do not support regular expressions, but do support the use of `*`
+as a wildcard.
+
 ```dotenv
-PLAIN_TEXT_ROUTE=/robots.txt,/license.txt
+PLAIN_TEXT_ROUTE=/robots.txt,/license.txt,*.xml
 ```
 
 ## `MATHJAX`
