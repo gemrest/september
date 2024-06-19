@@ -4,13 +4,7 @@ fn link_from_host_href(url: &Url, href: &str) -> Option<String> {
   Some(format!(
     "gemini://{}{}{}",
     url.domain()?,
-    {
-      if href.starts_with('/') {
-        ""
-      } else {
-        "/"
-      }
-    },
+    { if href.starts_with('/') { "" } else { "/" } },
     href
   ))
 }
@@ -73,7 +67,17 @@ pub fn from_gemini(
         if href.contains("://") && !href.starts_with("gemini://") {
           surface = true;
         } else if !href.starts_with("gemini://") && !href.starts_with('/') {
-          href = format!("./{href}");
+          href = format!(
+            "{}/{}",
+            url.domain().unwrap(),
+            if url.path().ends_with('/') {
+              format!("{}{}", url.path(), href)
+            } else {
+              format!("{}/{}", url.path(), href)
+            }
+          )
+          .replace("//", "/");
+          href = format!("gemini://{href}");
         } else if href.starts_with('/') || !href.contains("://") {
           href = link_from_host_href(url, &href)?;
         }
