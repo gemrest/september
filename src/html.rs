@@ -52,9 +52,20 @@ pub fn from_gemini(
 
     links.contains(&url.path().to_string()) || links.contains(&"*".to_string())
   };
+  let mut in_condense_links_flag_trap = true;
+  let condensible_headings_value =
+    var("CONDENSE_LINKS_AT_HEADINGS").unwrap_or_default();
+  let condensible_headings =
+    condensible_headings_value.split(',').collect::<Vec<_>>();
 
   for node in ast {
-    if previous_link && (!matches!(node, Node::Link { .. }) || !condense_links)
+    if condensible_headings.contains(&node.to_gemtext().as_str()) {
+      in_condense_links_flag_trap = true;
+    }
+
+    if previous_link
+      && (!matches!(node, Node::Link { .. })
+        || (!condense_links && !in_condense_links_flag_trap))
     {
       html.push_str("\n</p>");
       previous_link = false;
@@ -173,6 +184,10 @@ pub fn from_gemini(
         ));
       }
       Node::Heading { level, text } => {
+        if !condensible_headings.contains(&node.to_gemtext().as_str()) {
+          in_condense_links_flag_trap = false;
+        }
+
         if title.is_empty() && *level == 1 {
           title = safe(&text.clone()).to_string();
         }
