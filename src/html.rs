@@ -4,7 +4,13 @@ fn link_from_host_href(url: &Url, href: &str) -> Option<String> {
   Some(format!(
     "gemini://{}{}{}",
     url.domain()?,
-    { if href.starts_with('/') { "" } else { "/" } },
+    {
+      if href.starts_with('/') {
+        ""
+      } else {
+        "/"
+      }
+    },
     href
   ))
 }
