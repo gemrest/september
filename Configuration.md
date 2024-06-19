@@ -163,3 +163,19 @@ PRIMARY_COLOUR=var(--base09)
 PRIMARY_COLOUR=red
 PRIMARY_COLOUR=#ff0000
 ```
+
+## `CONDENSE_LINKS_AT_HEADING`
+
+This configuration option is similar to `CONDENSE_LINKS`, but only condenses
+links found under certain headings.
+
+For instance, I condense the few links I have on my index page under the
+"# Fuwn[.me]" heading, and I condense my quick links/navigation panel under the
+"## Quick Links" heading.
+
+This way, I don't accidentally condense say my entire sitemap, which could be
+hundreds of links long, but I do condense my quick links on every page.
+
+```dotenv
+CONDENSE_LINKS_AT_HEADINGS="## Quick Links,# Fuwn[.me]"
+```
