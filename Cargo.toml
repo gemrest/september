@@ -2,7 +2,7 @@
 
 [package]
 name = "september"
-version = "0.2.21"
+version = "0.2.22"
 authors = ["Fuwn <contact@fuwn.me>"]
 edition = "2021"
 description = "A simple and efficient Gemini-to-HTTP proxy."
@@ -21,7 +21,7 @@ opt-level = 3
 
 [dependencies]
 # Gemini
-germ = { version = "0.4.2", features = ["ast", "meta"] }
+germ = { version = "0.4.3", features = ["ast", "meta"] }
 
 # HTTP
 actix-web = "4.7.0"
