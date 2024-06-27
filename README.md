@@ -8,9 +8,9 @@ September remains simple, but packs more features than you could imagine, all co
 
 ## Usage
 
-A production deployment of September can be found at https://fuwn.me, with the root capsule set as [gemini://fuwn.me](gemini://fuwn.me).
+A production deployment of September can be found at <https://fuwn.me>, with the root capsule set as [gemini://fuwn.me](gemini://fuwn.me).
 
-You can try proxying any external capsule through the `/proxy/` route: https://fuwn.me/proxy/geminiprotocol.net/.
+You can try proxying any external capsule through the `/proxy/` route: <https://fuwn.me/proxy/geminiprotocol.net/>.
 
 ### Docker
 
@@ -32,7 +32,7 @@ docker run -d \
   fuwn/september:latest
 ```
 
-You may start to find this way of passing configuration cumbersome for many options, so Docker management tool like [Portainer](https://www.portainer.io/) or a Docker Compose file might come in handy.
+You may start to find this way of passing configuration cumbersome for many options, so a Docker management tool like [Portainer](https://www.portainer.io/) or a Docker Compose file might come in handy.
 
 ### Docker Compose
 
