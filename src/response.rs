@@ -146,7 +146,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
       ));
     }
   } else if !is_nocss {
-    html_context.push_str(&format!(r#"<link rel="stylesheet" href="https://latex.now.sh/style.css"><style>{CSS}</style>"#));
+    html_context.push_str(&format!(r#"<link rel="stylesheet" href="https://latex.vercel.app/style.css"><style>{CSS}</style>"#));
 
     if let Ok(primary) = var("PRIMARY_COLOUR") {
       html_context
