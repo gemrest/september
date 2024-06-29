@@ -115,7 +115,9 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
   let convert_time_taken = timer.elapsed();
 
   if is_raw {
-    html_context.push_str(&response.content().clone().unwrap_or_default());
+    html_context.push_str(
+      &response.content().as_ref().map_or_else(String::default, String::clone),
+    );
 
     return Ok(
       HttpResponse::Ok()
@@ -265,7 +267,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
 </details></body></html>",
     url,
     response.status(),
-    i32::from(response.status().clone()),
+    i32::from(*response.status()),
     response.meta(),
     response_time_taken.as_nanos() as f64 / 1_000_000.0,
     convert_time_taken.as_nanos() as f64 / 1_000_000.0,
@@ -278,9 +280,9 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
       path_matches_pattern(r, req.path())
         || path_matches_pattern(r, req.path().trim_end_matches('/'))
     }) {
-      return Ok(
-        HttpResponse::Ok().body(response.content().clone().unwrap_or_default()),
-      );
+      return Ok(HttpResponse::Ok().body(
+        response.content().as_ref().map_or_else(String::default, String::clone),
+      ));
     }
   }
 
