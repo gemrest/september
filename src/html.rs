@@ -4,7 +4,13 @@ fn link_from_host_href(url: &Url, href: &str) -> Option<String> {
   Some(format!(
     "gemini://{}{}{}",
     url.domain()?,
-    { if href.starts_with('/') { "" } else { "/" } },
+    {
+      if href.starts_with('/') {
+        ""
+      } else {
+        "/"
+      }
+    },
     href
   ))
 }
@@ -153,14 +159,14 @@ pub fn from_gemini(
                 html.push_str(&format!(
                   "<p><a href=\"{}\">{}</a> <i>Embedded below</i></p>\n",
                   href,
-                  safe(&text.clone().unwrap_or_default()),
+                  safe(&text.clone().unwrap_or_else(|| to.clone())),
                 ));
               }
 
               html.push_str(&format!(
                 "<p><img src=\"{}\" alt=\"{}\" /></p>\n",
                 safe(&href),
-                safe(&text.clone().unwrap_or_default())
+                safe(&text.clone().unwrap_or_else(|| to.clone())),
               ));
 
               continue;
@@ -173,7 +179,7 @@ pub fn from_gemini(
         html.push_str(&format!(
           "<a href=\"{}\">{}</a>",
           href,
-          safe(&text.clone().unwrap_or_default()),
+          safe(&text.clone().unwrap_or_else(|| to.clone())),
         ));
       }
       Node::Heading { level, text } => {
