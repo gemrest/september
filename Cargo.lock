@@ -594,9 +594,9 @@ dependencies = [
 
 [[package]]
 name = "germ"
-version = "0.4.3"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "701dd8ad6cb9061a244a85fb4534d9041e68c1c6c22e35040df97dcc7ce12596"
+checksum = "e2c057e745ba976509bc17b35f65364e7cef0ec2c9683d342ca55b92000432f1"
 dependencies = [
  "anyhow",
  "rustls",
@@ -1839,7 +1839,7 @@ checksum = "bebd363326d05ec3e2f532ab7660680f3b02130d780c299bca73469d521bc0ed"
 
 [[package]]
 name = "september"
-version = "0.2.23"
+version = "0.2.24"
 dependencies = [
  "actix-web",
  "anyhow",
