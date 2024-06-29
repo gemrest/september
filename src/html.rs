@@ -4,13 +4,7 @@ fn link_from_host_href(url: &Url, href: &str) -> Option<String> {
   Some(format!(
     "gemini://{}{}{}",
     url.domain()?,
-    {
-      if href.starts_with('/') {
-        ""
-      } else {
-        "/"
-      }
-    },
+    { if href.starts_with('/') { "" } else { "/" } },
     href
   ))
 }
@@ -21,8 +15,9 @@ pub fn from_gemini(
   url: &Url,
   is_proxy: bool,
 ) -> Option<(String, String)> {
-  let ast_tree =
-    germ::ast::Ast::from_string(response.content().clone().unwrap_or_default());
+  let ast_tree = germ::ast::Ast::from_string(
+    response.content().as_ref().map_or_else(String::default, String::clone),
+  );
   let ast = ast_tree.inner();
   let mut html = String::new();
   let mut title = String::new();
@@ -67,7 +62,7 @@ pub fn from_gemini(
     match node {
       Node::Text(text) => html.push_str(&format!("<p>{}</p>", safe(text))),
       Node::Link { to, text } => {
-        let mut href = to.clone();
+        let mut href = to.to_string();
         let mut surface = false;
 
         if href.contains("://") && !href.starts_with("gemini://") {
@@ -159,14 +154,14 @@ pub fn from_gemini(
                 html.push_str(&format!(
                   "<p><a href=\"{}\">{}</a> <i>Embedded below</i></p>\n",
                   href,
-                  safe(&text.clone().unwrap_or_else(|| to.clone())),
+                  safe(text.as_ref().unwrap_or(to)),
                 ));
               }
 
               html.push_str(&format!(
                 "<p><img src=\"{}\" alt=\"{}\" /></p>\n",
                 safe(&href),
-                safe(&text.clone().unwrap_or_else(|| to.clone())),
+                safe(text.as_ref().unwrap_or(to)),
               ));
 
               continue;
@@ -179,7 +174,7 @@ pub fn from_gemini(
         html.push_str(&format!(
           "<a href=\"{}\">{}</a>",
           href,
-          safe(&text.clone().unwrap_or_else(|| to.clone())),
+          safe(text.as_ref().unwrap_or(to)),
         ));
       }
       Node::Heading { level, text } => {
@@ -188,7 +183,7 @@ pub fn from_gemini(
         }
 
         if title.is_empty() && *level == 1 {
-          title = safe(&text.clone()).to_string();
+          title = safe(text).to_string();
         }
 
         html.push_str(&format!(
