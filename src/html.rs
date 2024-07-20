@@ -67,6 +67,8 @@ pub fn from_gemini(
 
         if href.contains("://") && !href.starts_with("gemini://") {
           surface = true;
+        } else if !href.contains("://") && href.contains(':') {
+          href = href.to_string();
         } else if !href.starts_with("gemini://") && !href.starts_with('/') {
           href = format!(
             "{}/{}",
