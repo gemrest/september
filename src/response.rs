@@ -58,7 +58,10 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
     }
   };
 
-  if response.content().is_none() {
+  if response.content().is_none()
+    && response.status() != &germ::request::Status::PermanentRedirect
+    && response.status() != &germ::request::Status::TemporaryRedirect
+  {
     response = match germ::request::request(&match url_from_path(
       req.path().trim_end_matches('/'),
       true,
@@ -211,8 +214,16 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
       ));
 
       let redirect_url = match url_from_path(
-        response.meta().trim_end_matches('/'),
-        true,
+        &if response.meta().trim_end_matches('/').starts_with('/') {
+          format!(
+            "/proxy/{}{}",
+            url.domain().unwrap_or_default(),
+            response.meta().trim_end_matches('/')
+          )
+        } else {
+          response.meta().trim_end_matches('/').to_string()
+        },
+        false,
         &mut is_proxy,
         &mut is_raw,
         &mut is_nocss,
