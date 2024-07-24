@@ -8,12 +8,12 @@ use {
 
 const CSS: &str = include_str!("../default.css");
 
-#[allow(clippy::unused_async, clippy::future_not_send, clippy::too_many_lines)]
+#[allow(clippy::future_not_send, clippy::too_many_lines)]
 pub async fn default(
-  req: actix_web::HttpRequest,
+  http_request: actix_web::HttpRequest,
 ) -> Result<HttpResponse, Error> {
   if ["/proxy", "/proxy/", "/x", "/x/", "/raw", "/raw/", "/nocss", "/nocss/"]
-    .contains(&req.path())
+    .contains(&http_request.path())
   {
     return Ok(
       HttpResponse::Ok()
@@ -26,10 +26,11 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
 
   let mut configuration = configuration::Configuration::new();
   let url = match url_from_path(
-    &format!("{}{}", req.path(), {
-      if !req.query_string().is_empty() || req.uri().to_string().ends_with('?')
+    &format!("{}{}", http_request.path(), {
+      if !http_request.query_string().is_empty()
+        || http_request.uri().to_string().ends_with('?')
       {
-        format!("?{}", req.query_string())
+        format!("?{}", http_request.query_string())
       } else {
         String::new()
       }
@@ -175,7 +176,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
   html_context.push_str(&format!("<title>{gemini_title}</title>"));
   html_context.push_str("</head><body>");
 
-  if !req.path().starts_with("/proxy") {
+  if !http_request.path().starts_with("/proxy") {
     if let Ok(header) = var("HEADER") {
       html_context
         .push_str(&format!("<big><blockquote>{header}</blockquote></big>"));
@@ -236,8 +237,8 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
 
   if let Ok(plain_texts) = var("PLAIN_TEXT_ROUTE") {
     if plain_texts.split(',').any(|r| {
-      path_matches_pattern(r, req.path())
-        || path_matches_pattern(r, req.path().trim_end_matches('/'))
+      path_matches_pattern(r, http_request.path())
+        || path_matches_pattern(r, http_request.path().trim_end_matches('/'))
     }) {
       return Ok(HttpResponse::Ok().body(
         response.content().as_ref().map_or_else(String::default, String::clone),
