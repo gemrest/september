@@ -3,14 +3,12 @@ use url::Url;
 pub fn from_path(
   path: &str,
   fallback: bool,
-  is_proxy: &mut bool,
-  is_raw: &mut bool,
-  is_nocss: &mut bool,
+  configuration: &mut crate::response::configuration::Configuration,
 ) -> Result<Url, url::ParseError> {
   Ok(
     #[allow(clippy::blocks_in_conditions)]
     match Url::try_from(&*if path.starts_with("/proxy") {
-      *is_proxy = true;
+      configuration.set_proxy(true);
 
       format!(
         "gemini://{}{}",
@@ -18,7 +16,7 @@ pub fn from_path(
         if fallback { "/" } else { "" }
       )
     } else if path.starts_with("/x") {
-      *is_proxy = true;
+      configuration.set_proxy(true);
 
       format!(
         "gemini://{}{}",
@@ -26,8 +24,8 @@ pub fn from_path(
         if fallback { "/" } else { "" }
       )
     } else if path.starts_with("/raw") {
-      *is_proxy = true;
-      *is_raw = true;
+      configuration.set_proxy(true);
+      configuration.set_raw(true);
 
       format!(
         "gemini://{}{}",
@@ -35,8 +33,8 @@ pub fn from_path(
         if fallback { "/" } else { "" }
       )
     } else if path.starts_with("/nocss") {
-      *is_proxy = true;
-      *is_nocss = true;
+      configuration.set_proxy(true);
+      configuration.set_no_css(true);
 
       format!(
         "gemini://{}{}",
