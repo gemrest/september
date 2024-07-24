@@ -1,3 +1,5 @@
+pub mod configuration;
+
 use {
   crate::url::from_path as url_from_path,
   actix_web::{Error, HttpResponse},
@@ -22,9 +24,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
     );
   }
 
-  let mut is_proxy = false;
-  let mut is_raw = false;
-  let mut is_nocss = false;
+  let mut configuration = configuration::Configuration::new();
   let url = match url_from_path(
     &format!("{}{}", req.path(), {
       if !req.query_string().is_empty() || req.uri().to_string().ends_with('?')
@@ -35,9 +35,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
       }
     }),
     false,
-    &mut is_proxy,
-    &mut is_raw,
-    &mut is_nocss,
+    &mut configuration,
   ) {
     Ok(url) => url,
     Err(e) => {
@@ -94,7 +92,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
 
   timer = Instant::now();
 
-  let mut html_context = if is_raw {
+  let mut html_context = if configuration.is_raw() {
     String::new()
   } else {
     format!(
@@ -107,11 +105,11 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
     )
   };
   let gemini_html =
-    crate::html::from_gemini(&response, &url, is_proxy).unwrap();
+    crate::html::from_gemini(&response, &url, &configuration).unwrap();
   let gemini_title = gemini_html.0;
   let convert_time_taken = timer.elapsed();
 
-  if is_raw {
+  if configuration.is_raw() {
     html_context.push_str(
       &response.content().as_ref().map_or_else(String::default, String::clone),
     );
@@ -123,7 +121,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
     );
   }
 
-  if is_nocss {
+  if configuration.is_no_css() {
     html_context.push_str(&gemini_html.1);
 
     return Ok(
@@ -142,7 +140,7 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
         "<link rel=\"stylesheet\" type=\"text/css\" href=\"{stylesheet}\">",
       ));
     }
-  } else if !is_nocss {
+  } else if !configuration.is_no_css() {
     html_context.push_str(&format!(r#"<link rel="stylesheet" href="https://latex.vercel.app/style.css"><style>{CSS}</style>"#));
 
     if let Ok(primary) = var("PRIMARY_COLOUR") {
