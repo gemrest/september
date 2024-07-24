@@ -13,7 +13,7 @@ fn link_from_host_href(url: &Url, href: &str) -> Option<String> {
 pub fn from_gemini(
   response: &germ::request::Response,
   url: &Url,
-  is_proxy: bool,
+  configuration: &crate::response::configuration::Configuration,
 ) -> Option<(String, String)> {
   let ast_tree = germ::ast::Ast::from_string(
     response.content().as_ref().map_or_else(String::default, String::clone),
@@ -92,7 +92,8 @@ pub fn from_gemini(
           && href.contains("gemini://")
           && !surface
         {
-          if is_proxy
+          if (configuration.is_proxy())
+            || configuration.is_no_css()
             || href
               .trim_start_matches("gemini://")
               .trim_end_matches('/')
@@ -102,7 +103,11 @@ pub fn from_gemini(
               .unwrap()
               != &url.host().unwrap().to_string().as_str()
           {
-            href = format!("/proxy/{}", href.trim_start_matches("gemini://"));
+            href = format!(
+              "/{}/{}",
+              if configuration.is_no_css() { "nocss" } else { "proxy" },
+              href.trim_start_matches("gemini://")
+            );
           } else {
             href = href.trim_start_matches("gemini://").replacen(
               &if let Some(host) = url.host() {
