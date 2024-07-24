@@ -15,13 +15,13 @@ pub async fn default(
   if ["/proxy", "/proxy/", "/x", "/x/", "/raw", "/raw/", "/nocss", "/nocss/"]
     .contains(&http_request.path())
   {
-    return Ok(
-      HttpResponse::Ok()
+    return Ok(HttpResponse::Ok()
         .content_type("text/html")
-        .body(r#"<pre>This is a proxy path. Please specify a Gemini URL without the "gemini://" to proxy.
-
-For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".</pre>"#),
-    );
+      .body(r"<h1>September</h1>
+<p>This is a proxy path. Specify a Gemini URL without the protocol (<code>gemini://</code>) to proxy it.</p>
+<p>To proxy <code>gemini://fuwn.me/uptime</code>, visit <code>https://fuwn.me/proxy/fuwn.me/uptime</code>.</p>
+<p>Additionally, you may visit <code>/raw</code> to view the raw Gemini content, or <code>/nocss</code> to view the content without CSS.</p>
+      "));
   }
 
   let mut configuration = configuration::Configuration::new();
