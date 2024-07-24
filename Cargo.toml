@@ -36,8 +36,8 @@ dotenv = "0.15.0"
 # URL Standard
 url = "2.3.1"
 
-# HTML Encoding
-html-escape = "0.2.13"
+# Markdown Encoding
+comrak = "0.26.0"
 
 [build-dependencies]
 # Compile-time Environment Variables
