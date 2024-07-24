@@ -57,34 +57,32 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
       return Ok(HttpResponse::Ok().body(e.to_string()));
     }
   };
+  let mut redirect_response_status = None;
+  let mut redirect_url = None;
 
-  if response.content().is_none()
-    && response.status() != &germ::request::Status::PermanentRedirect
-    && response.status() != &germ::request::Status::TemporaryRedirect
+  if *response.status() == germ::request::Status::PermanentRedirect
+    || *response.status() == germ::request::Status::TemporaryRedirect
   {
-    response = match germ::request::request(&match url_from_path(
-      req.path().trim_end_matches('/'),
-      true,
-      &mut is_proxy,
-      &mut is_raw,
-      &mut is_nocss,
-    ) {
-      Ok(url) => url,
-      Err(e) => {
-        return Ok(
-          HttpResponse::BadRequest()
-            .content_type("text/plain")
-            .body(format!("{e}")),
-        );
+    redirect_response_status = Some(*response.status());
+    redirect_url = Some(
+      url::Url::parse(&if response.meta().starts_with('/') {
+        format!(
+          "gemini://{}{}",
+          url.domain().unwrap_or_default(),
+          response.meta()
+        )
+      } else {
+        response.meta().to_string()
+      })
+      .unwrap(),
+    );
+    response =
+      match germ::request::request(&redirect_url.clone().unwrap()).await {
+        Ok(response) => response,
+        Err(e) => {
+          return Ok(HttpResponse::Ok().body(e.to_string()));
+        }
       }
-    })
-    .await
-    {
-      Ok(response) => response,
-      Err(e) => {
-        return Ok(HttpResponse::Ok().body(e.to_string()));
-      }
-    };
   }
 
   let response_time_taken = timer.elapsed();
@@ -197,61 +195,23 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
 
   match response.status() {
     germ::request::Status::Success => {
-      html_context.push_str(&gemini_html.1);
-    }
-    germ::request::Status::PermanentRedirect
-    | germ::request::Status::TemporaryRedirect => {
-      html_context.push_str(&format!(
-        "<blockquote>This page {} redirects to <a \
-         href=\"{}\">{}</a>.</blockquote>",
-        if response.status() == &germ::request::Status::PermanentRedirect {
-          "permanently"
-        } else {
-          "temporarily"
-        },
-        response.meta(),
-        response.meta().trim()
-      ));
-
-      let redirect_url = match url_from_path(
-        &if response.meta().trim_end_matches('/').starts_with('/') {
-          format!(
-            "/proxy/{}{}",
-            url.domain().unwrap_or_default(),
-            response.meta().trim_end_matches('/')
-          )
-        } else {
-          response.meta().trim_end_matches('/').to_string()
-        },
-        false,
-        &mut is_proxy,
-        &mut is_raw,
-        &mut is_nocss,
-      ) {
-        Ok(url) => url,
-        Err(e) => {
-          return Ok(
-            HttpResponse::BadRequest()
-              .content_type("text/plain")
-              .body(format!("{e}")),
-          );
-        }
-      };
-
-      html_context.push_str(
-        &crate::html::from_gemini(
-          &match germ::request::request(&redirect_url).await {
-            Ok(response) => response,
-            Err(e) => {
-              return Ok(HttpResponse::Ok().body(e.to_string()));
-            }
+      if let (Some(status), Some(url)) =
+        (redirect_response_status, redirect_url)
+      {
+        html_context.push_str(&format!(
+          "<blockquote>This page {} redirects to <a \
+           href=\"{}\">{}</a>.</blockquote>",
+          if status == germ::request::Status::PermanentRedirect {
+            "permanently"
+          } else {
+            "temporarily"
           },
-          &redirect_url,
-          is_proxy,
-        )
-        .unwrap()
-        .1,
-      );
+          url,
+          url
+        ));
+      }
+
+      html_context.push_str(&gemini_html.1);
     }
     _ => html_context.push_str(&format!("<p>{}</p>", response.meta())),
   }
