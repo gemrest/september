@@ -25,7 +25,6 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
   let mut is_proxy = false;
   let mut is_raw = false;
   let mut is_nocss = false;
-  // Try to construct a Gemini URL
   let url = match url_from_path(
     &format!("{}{}", req.path(), {
       if !req.query_string().is_empty() || req.uri().to_string().ends_with('?')
@@ -49,7 +48,6 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
       );
     }
   };
-  // Make a request to get Gemini content and time it.
   let mut timer = Instant::now();
   let mut response = match germ::request::request(&url).await {
     Ok(response) => response,
@@ -94,10 +92,8 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
   let language =
     meta.parameters().get("lang").map_or_else(String::new, ToString::to_string);
 
-  // Reset timer for below
   timer = Instant::now();
 
-  // Convert Gemini Response to HTML and time it.
   let mut html_context = if is_raw {
     String::new()
   } else {
@@ -137,8 +133,6 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
     );
   }
 
-  // Try to add an external stylesheet from the `CSS_EXTERNAL` environment
-  // variable.
   if let Ok(css) = var("CSS_EXTERNAL") {
     let stylesheets =
       css.split(',').filter(|s| !s.is_empty()).collect::<Vec<_>>();
@@ -160,8 +154,6 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
     }
   }
 
-  // Try to add an external favicon from the `FAVICON_EXTERNAL` environment
-  // variable.
   if let Ok(favicon) = var("FAVICON_EXTERNAL") {
     html_context.push_str(&format!(
       "<link rel=\"icon\" type=\"image/x-icon\" href=\"{favicon}\">",
@@ -182,7 +174,6 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
     html_context.push_str(&head);
   }
 
-  // Add a title to HTML response
   html_context.push_str(&format!("<title>{gemini_title}</title>"));
   html_context.push_str("</head><body>");
 
@@ -216,7 +207,6 @@ For example: to proxy "gemini://fuwn.me/uptime", visit "/proxy/fuwn.me/uptime".<
     _ => html_context.push_str(&format!("<p>{}</p>", response.meta())),
   }
 
-  // Add proxy information to footer of HTML response
   html_context.push_str(&format!(
     "<details>\n<summary>Proxy Information</summary>
 <dl>
