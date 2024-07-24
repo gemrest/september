@@ -9,6 +9,12 @@ fn link_from_host_href(url: &Url, href: &str) -> Option<String> {
   ))
 }
 
+fn safe(text: &str) -> String {
+  comrak::markdown_to_html(text, &comrak::ComrakOptions::default())
+    .replace("<p>", "")
+    .replace("</p>", "")
+}
+
 #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
 pub fn from_gemini(
   response: &germ::request::Response,
@@ -21,7 +27,6 @@ pub fn from_gemini(
   let ast = ast_tree.inner();
   let mut html = String::new();
   let mut title = String::new();
-  let safe = html_escape::encode_text;
   let mut previous_link = false;
   let condense_links = {
     let links = var("CONDENSE_LINKS").map_or_else(
@@ -208,7 +213,7 @@ pub fn from_gemini(
         "<ul>{}</ul>",
         items
           .iter()
-          .map(|i| format!("<li>{i}</li>"))
+          .map(|i| format!("<li>{}</li>", safe(i)))
           .collect::<Vec<String>>()
           .join("\n")
       )),
