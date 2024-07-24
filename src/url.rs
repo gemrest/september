@@ -44,8 +44,6 @@ pub fn from_path(
         if fallback { "/" } else { "" }
       )
     } else {
-      // Try to set `ROOT` as `ROOT` environment variable, or use
-      // `"gemini://fuwn.me"` as default.
       format!(
         "{}{}{}",
         {
