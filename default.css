@@ -81,6 +81,7 @@ h4:before,
 h5:before,
 h6:before {
   color: var(--muted);
+  font-weight: 400;
 }
 
 h1:first-child {
