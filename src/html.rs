@@ -21,6 +21,8 @@ pub fn from_gemini(
   url: &Url,
   configuration: &crate::response::configuration::Configuration,
 ) -> Option<(String, String)> {
+  const GEMINI_FRAGMENT: &str =
+    r#"<span class="gemini-fragment">=&#62; </span>"#;
   let ast_tree = germ::ast::Ast::from_string(
     response.content().as_ref().map_or_else(String::default, String::clone),
   );
@@ -59,14 +61,7 @@ pub fn from_gemini(
           .chars()
           .rev()
           .collect::<String>()
-          .replacen(
-            &r#"<span class="gemini-fragment">=&#62;</span> "#
-              .chars()
-              .rev()
-              .collect::<String>(),
-            "",
-            1,
-          )
+          .replacen(&GEMINI_FRAGMENT.chars().rev().collect::<String>(), "", 1)
           .chars()
           .rev()
           .collect::<String>()
@@ -95,7 +90,7 @@ pub fn from_gemini(
     } else if previous_link {
       html = align_adjacent_links(&html);
 
-      html.push_str(" <span style=\"opacity: 50%;\">|</span> ");
+      html.push_str(r#" <span class="gemini-fragment">|</span> "#);
 
       previous_link_count += 1;
     } else if !previous_link && matches!(node, Node::Link { .. }) {
@@ -223,13 +218,9 @@ pub fn from_gemini(
 
         html.push_str(&format!(
           r#"{}<a href="{}">{}</a>"#,
-          if condense_links {
-            ""
-          } else {
-            r#"<span class="gemini-fragment">=&#62;</span> "#
-          },
+          if condense_links { "" } else { GEMINI_FRAGMENT },
           href,
-          safe(text.as_ref().unwrap_or(to)),
+          safe(text.as_ref().unwrap_or(to)).trim(),
         ));
       }
       Node::Heading { level, text } => {
