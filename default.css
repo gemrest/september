@@ -53,18 +53,23 @@ h5 + h6 {
 h1:before {
   content: "# ";
 }
+
 h2:before {
   content: "## ";
 }
+
 h3:before {
   content: "### ";
 }
+
 h4:before {
   content: "#### ";
 }
+
 h5:before {
   content: "##### ";
 }
+
 h6:before {
   content: "###### ";
 }
@@ -198,6 +203,7 @@ sub {
   top: -0.25rem;
   font-size: unset;
 }
+
 sub {
   top: 0.25rem;
 }
@@ -207,15 +213,18 @@ table {
   margin: 0 0 1.5rem 0;
   overflow-wrap: anywhere;
 }
+
 th,
 td {
   padding: 0 0.75rem;
   vertical-align: top;
 }
+
 th:first-child,
 td:first-child {
   padding-left: 0;
 }
+
 th {
   text-align: inherit;
 }
