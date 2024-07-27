@@ -28,6 +28,7 @@ pub fn from_gemini(
   let mut html = String::new();
   let mut title = String::new();
   let mut previous_link = false;
+  let mut previous_link_count = 0;
   let condense_links = {
     let links = var("CONDENSE_LINKS").map_or_else(
       |_| vec![],
@@ -52,14 +53,51 @@ pub fn from_gemini(
       in_condense_links_flag_trap = true;
     }
 
+    let align_adjacent_links = |html: &str| {
+      if previous_link_count > 0 {
+        html
+          .chars()
+          .rev()
+          .collect::<String>()
+          .replacen(
+            &r#"<span class="gemini-fragment">=&#62;</span> "#
+              .chars()
+              .rev()
+              .collect::<String>(),
+            "",
+            1,
+          )
+          .chars()
+          .rev()
+          .collect::<String>()
+      } else {
+        html.to_string()
+      }
+    };
+
     if previous_link
       && (!matches!(node, Node::Link { .. })
         || (!condense_links && !in_condense_links_flag_trap))
     {
-      html.push_str("\n</p>");
+      if let Some(next) = ast.iter().skip_while(|n| n != &node).nth(1) {
+        if matches!(next, Node::Link { .. }) || previous_link {
+          html.push_str("<br />");
+        } else {
+          html.push_str("</p>");
+        }
+      } else {
+        html.push_str("</p>");
+      }
+
       previous_link = false;
+      html = align_adjacent_links(&html);
+      previous_link_count = 0;
     } else if previous_link {
+      html = align_adjacent_links(&html);
+
       html.push_str(" <span style=\"opacity: 50%;\">|</span> ");
+
+      previous_link_count += 1;
     } else if !previous_link && matches!(node, Node::Link { .. }) {
       html.push_str("<p>");
     }
@@ -184,7 +222,12 @@ pub fn from_gemini(
         previous_link = true;
 
         html.push_str(&format!(
-          "<a href=\"{}\">{}</a>",
+          r#"{}<a href="{}">{}</a>"#,
+          if condense_links {
+            ""
+          } else {
+            r#"<span class="gemini-fragment">=&#62;</span> "#
+          },
           href,
           safe(text.as_ref().unwrap_or(to)),
         ));
