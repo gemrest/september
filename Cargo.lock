@@ -2143,7 +2143,7 @@ checksum = "bebd363326d05ec3e2f532ab7660680f3b02130d780c299bca73469d521bc0ed"
 
 [[package]]
 name = "september"
-version = "0.2.30"
+version = "0.2.31"
 dependencies = [
  "actix-web",
  "anyhow",
