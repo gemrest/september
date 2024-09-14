@@ -255,7 +255,11 @@ pub fn from_gemini(
         html.push_str(&format!("<blockquote>{}</blockquote>", safe(text)));
       }
       Node::PreformattedText { text, .. } => {
-        html.push_str(&format!("<pre>{}</pre>", safe(text)));
+        let mut new_text = text.to_string();
+
+        new_text.pop();
+
+        html.push_str(&format!("<pre>{new_text}</pre>"));
       }
       Node::Whitespace => {}
     }
