@@ -23,7 +23,7 @@
         pkgs = import nixpkgs { inherit system overlays; };
       in
       {
-        devShell =
+        devShells.${system} =
           with pkgs;
           mkShell.override
             {
