@@ -30,8 +30,19 @@
               stdenv = stdenvAdapters.useMoldLinker clangStdenv;
             }
             {
-              nativeBuildInputs = [
-                rust-bin.stable.latest.default
+              buildInputs = [
+                # https://github.com/oxalica/rust-overlay/issues/136#issuecomment-1716902831
+                (lib.hiPrio (
+                  rust-bin.stable.latest.minimal.override {
+                    extensions = [ "rust-docs" ];
+                  }
+                ))
+                (rust-bin.selectLatestNightlyWith (
+                  toolchain:
+                  toolchain.minimal.override {
+                    extensions = [ "rustfmt" ];
+                  }
+                ))
                 cargo-make
                 openssl
                 pkg-config
