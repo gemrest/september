@@ -15,3 +15,6 @@ fleet.toml
 
 # Visual Studio Code
 .vscode
+
+# Nix
+result*
