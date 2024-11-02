@@ -97,7 +97,7 @@ pub async fn default(
     String::new()
   } else {
     format!(
-      "<!DOCTYPE html><html{}><head>",
+      r#"<!DOCTYPE html><html{}><head><meta name="viewport" content="width=device-width, initial-scale=1.0">"#,
       if language.is_empty() {
         String::new()
       } else {
@@ -214,7 +214,7 @@ pub async fn default(
 <dt>Status Code</dt>
 <dd>{} ({})</dd>
 <dt>Meta</dt><dd><code>{}</code></dd>\
-     
+
 <dt>Capsule Response Time</dt>
 <dd>{} milliseconds</dd>
 <dt>Gemini-to-HTML \
