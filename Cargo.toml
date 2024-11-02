@@ -21,27 +21,27 @@ opt-level = 3
 
 [dependencies]
 # Gemini
-germ = { version = "0.4.4", features = ["ast", "meta"] }
+germ = { version = "0.4.5", features = ["ast", "meta"] }
 
 # HTTP
-actix-web = "4.7.0"
+actix-web = "4.9.0"
 
 # Logging
 pretty_env_logger = "0.5.0"
-log = "0.4.21"
+log = "0.4.22"
 
 # Environment Variables
 dotenv = "0.15.0"
 
 # URL Standard
-url = "2.3.1"
+url = "2.5.2"
 
 # Markdown Encoding
-comrak = "0.26.0"
+comrak = "0.29.0"
 
 [build-dependencies]
 # Compile-time Environment Variables
-vergen = { version = "8.3.1", features = ["git", "gitoxide"] }
+vergen = { version = "8.3.2", features = ["git", "gitoxide"] }
 
 # `Result`
-anyhow = "1.0.71"
+anyhow = "1.0.92"
