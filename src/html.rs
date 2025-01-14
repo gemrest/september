@@ -103,6 +103,12 @@ pub fn from_gemini(
         let mut href = to.to_string();
         let mut surface = false;
 
+        if href.starts_with("./") || href.starts_with("../") {
+          if let Ok(url) = url.join(&href) {
+            href = url.to_string();
+          }
+        }
+
         if href.contains("://") && !href.starts_with("gemini://") {
           surface = true;
         } else if !href.contains("://") && href.contains(':') {
