@@ -17,9 +17,9 @@ docker:
   SAVE IMAGE --push fuwn/september:$tag
 
 deps:
-  ARG rustc="1.76.0"
+  ARG rustc="1.78.0"
 
-  FROM clux/muslrust:$rustc
+  FROM clux/muslrust:$rustc-stable
 
   RUN curl "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}/rustup-init" -o rustup-init \
     && chmod +x rustup-init \
