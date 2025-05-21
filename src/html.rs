@@ -1,4 +1,4 @@
-use {germ::ast::Node, std::env::var, url::Url};
+use {germ::ast::Node, std::env::var, std::fmt::Write, url::Url};
 
 fn link_from_host_href(url: &Url, href: &str) -> Option<String> {
   Some(format!(
@@ -98,7 +98,9 @@ pub fn from_gemini(
     }
 
     match node {
-      Node::Text(text) => html.push_str(&format!("<p>{}</p>", safe(text))),
+      Node::Text(text) => {
+        let _ = write!(&mut html, "<p>{}</p>", safe(text));
+      }
       Node::Link { to, text } => {
         let mut href = to.to_string();
         let mut surface = false;
@@ -202,18 +204,20 @@ pub fn from_gemini(
               || extension == "svg"
             {
               if embed_images == "1" {
-                html.push_str(&format!(
-                  "<p><a href=\"{}\">{}</a> <i>Embedded below</i></p>\n",
+                let _ = writeln!(
+                  &mut html,
+                  "<p><a href=\"{}\">{}</a> <i>Embedded below</i></p>",
                   href,
                   safe(text.as_ref().unwrap_or(to)),
-                ));
+                );
               }
 
-              html.push_str(&format!(
-                "<p><img src=\"{}\" alt=\"{}\" /></p>\n",
+              let _ = writeln!(
+                &mut html,
+                "<p><img src=\"{}\" alt=\"{}\" /></p>",
                 safe(&href),
                 safe(text.as_ref().unwrap_or(to)),
-              ));
+              );
 
               continue;
             }
@@ -222,12 +226,13 @@ pub fn from_gemini(
 
         previous_link = true;
 
-        html.push_str(&format!(
+        let _ = write!(
+          &mut html,
           r#"{}<a href="{}">{}</a>"#,
           if condense_links { "" } else { GEMINI_FRAGMENT },
           href,
           safe(text.as_ref().unwrap_or(to)).trim(),
-        ));
+        );
       }
       Node::Heading { level, text } => {
         if !condensible_headings.contains(&node.to_gemtext().as_str()) {
@@ -238,7 +243,8 @@ pub fn from_gemini(
           title = safe(text).to_string();
         }
 
-        html.push_str(&format!(
+        let _ = write!(
+          &mut html,
           "<{}>{}</{0}>",
           match level {
             1 => "h1",
@@ -247,25 +253,28 @@ pub fn from_gemini(
             _ => "p",
           },
           safe(text),
-        ));
+        );
       }
-      Node::List(items) => html.push_str(&format!(
-        "<ul>{}</ul>",
-        items
-          .iter()
-          .map(|i| format!("<li>{}</li>", safe(i)))
-          .collect::<Vec<String>>()
-          .join("\n")
-      )),
+      Node::List(items) => {
+        let _ = write!(
+          &mut html,
+          "<ul>{}</ul>",
+          items
+            .iter()
+            .map(|i| format!("<li>{}</li>", safe(i)))
+            .collect::<Vec<String>>()
+            .join("\n")
+        );
+      }
       Node::Blockquote(text) => {
-        html.push_str(&format!("<blockquote>{}</blockquote>", safe(text)));
+        let _ = write!(&mut html, "<blockquote>{}</blockquote>", safe(text));
       }
       Node::PreformattedText { text, .. } => {
         let mut new_text = text.to_string();
 
         new_text.pop();
 
-        html.push_str(&format!("<pre>{new_text}</pre>"));
+        let _ = write!(&mut html, "<pre>{new_text}</pre>");
       }
       Node::Whitespace => {}
     }
