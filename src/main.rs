@@ -14,7 +14,8 @@ mod html;
 mod response;
 mod url;
 
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 
 use {actix_web::web, response::default, std::env::var};
 
