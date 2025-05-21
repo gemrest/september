@@ -18,3 +18,7 @@ fleet.toml
 
 # Nix
 result*
+
+# macOS
+.DS_Store
+
