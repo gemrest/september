@@ -22,3 +22,5 @@ result*
 # macOS
 .DS_Store
 
+# Fuwn/justfiles
+*.just
