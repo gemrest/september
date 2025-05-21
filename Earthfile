@@ -1,9 +1,6 @@
 VERSION 0.7
 
-all:
-  BUILD +docker
-
-docker:
+image:
   ARG tag=latest
 
   FROM scratch
@@ -16,25 +13,8 @@ docker:
 
   SAVE IMAGE --push fuwn/september:$tag
 
-deps:
-  ARG rustc="1.78.0"
-
-  FROM clux/muslrust:$rustc-stable
-
-  RUN curl "https://static.rust-lang.org/rustup/archive/${RUSTUP_VER}/${RUST_ARCH}/rustup-init" -o rustup-init \
-    && chmod +x rustup-init \
-    && ./rustup-init -y --default-toolchain $rustc --profile minimal \
-    && rm rustup-init \
-    && ~/.cargo/bin/rustup target add x86_64-unknown-linux-musl \
-    && echo "[build]\ntarget = \"x86_64-unknown-linux-musl\"" > ~/.cargo/config
-
-  RUN apt-get update && apt-get install -y gnupg2
-
-  RUN curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
-    && apt-get install -y clang
-
 build:
-  FROM +deps
+  FROM messense/rust-musl-cross:x86_64-musl
 
   WORKDIR /source
 
@@ -44,7 +24,7 @@ build:
 
   COPY Cargo.* .
 
-  RUN cargo build --release
+  RUN --mount=type=cache,target=/usr/local/cargo/registry cargo build --release
 
   COPY .git .git
   COPY src src
@@ -52,11 +32,8 @@ build:
   COPY Cargo.* .
   COPY default.css .
 
-  RUN --mount=type=cache,target=/source/september/target \
-      --mount=type=cache,target=/root/.cargo/registry \
-      cargo build --release --bin september \
-      && strip -s /source/september/target/x86_64-unknown-linux-musl/release/september \
-      && mv /source/september/target/x86_64-unknown-linux-musl/release/september .
+  RUN --mount=type=cache,target=/usr/local/cargo/registry cargo build --release
+  RUN strip -s /source/september/target/x86_64-unknown-linux-musl/release/september
+  RUN mv /source/september/target/x86_64-unknown-linux-musl/release/september .
 
   SAVE ARTIFACT /source/september/september
-
