@@ -10,9 +10,16 @@ fn link_from_host_href(url: &Url, href: &str) -> Option<String> {
 }
 
 fn safe(text: &str) -> String {
-  comrak::markdown_to_html(text, &comrak::ComrakOptions::default())
-    .replace("<p>", "")
-    .replace("</p>", "")
+  let is_ordered_list = text.starts_with(|c: char| c.is_ascii_digit())
+    && text.get(1..3) == Some(". ");
+
+  if is_ordered_list {
+    text.to_string()
+  } else {
+    comrak::markdown_to_html(text, &comrak::ComrakOptions::default())
+      .replace("<p>", "")
+      .replace("</p>", "")
+  }
 }
 
 #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
