@@ -3,7 +3,7 @@ pub mod configuration;
 use {
   crate::url::from_path as url_from_path,
   actix_web::{Error, HttpResponse},
-  std::{env::var, time::Instant},
+  std::{env::var, fmt::Write, time::Instant},
 };
 
 const CSS: &str = include_str!("../default.css");
@@ -137,26 +137,35 @@ pub async fn default(
       css.split(',').filter(|s| !s.is_empty()).collect::<Vec<_>>();
 
     for stylesheet in stylesheets {
-      html_context.push_str(&format!(
+      let _ = write!(
+        &mut html_context,
         "<link rel=\"stylesheet\" type=\"text/css\" href=\"{stylesheet}\">",
-      ));
+      );
     }
   } else if !configuration.is_no_css() {
-    html_context.push_str(&format!(r#"<link rel="stylesheet" href="https://latex.vercel.app/style.css"><style>{CSS}</style>"#));
+    let _ = write!(
+      &mut html_context,
+      r#"<link rel="stylesheet" href="https://latex.vercel.app/style.css"><style>{CSS}</style>"#
+    );
 
     if let Ok(primary) = var("PRIMARY_COLOUR") {
-      html_context
-        .push_str(&format!("<style>:root {{ --primary: {primary} }}</style>"));
+      let _ = write!(
+        &mut html_context,
+        "<style>:root {{ --primary: {primary} }}</style>"
+      );
     } else {
-      html_context
-        .push_str("<style>:root { --primary: var(--base0D); }</style>");
+      let _ = write!(
+        &mut html_context,
+        "<style>:root {{ --primary: var(--base0D); }}</style>"
+      );
     }
   }
 
   if let Ok(favicon) = var("FAVICON_EXTERNAL") {
-    html_context.push_str(&format!(
+    let _ = write!(
+      &mut html_context,
       "<link rel=\"icon\" type=\"image/x-icon\" href=\"{favicon}\">",
-    ));
+    );
   }
 
   if var("MATHJAX").unwrap_or_else(|_| "true".to_string()).to_lowercase()
@@ -173,13 +182,15 @@ pub async fn default(
     html_context.push_str(&head);
   }
 
-  html_context.push_str(&format!("<title>{gemini_title}</title>"));
-  html_context.push_str("</head><body>");
+  let _ = write!(&mut html_context, "<title>{gemini_title}</title>");
+  let _ = write!(&mut html_context, "</head><body>");
 
   if !http_request.path().starts_with("/proxy") {
     if let Ok(header) = var("HEADER") {
-      html_context
-        .push_str(&format!("<big><blockquote>{header}</blockquote></big>"));
+      let _ = write!(
+        &mut html_context,
+        "<big><blockquote>{header}</blockquote></big>"
+      );
     }
   }
 
@@ -188,7 +199,8 @@ pub async fn default(
       if let (Some(status), Some(url)) =
         (redirect_response_status, redirect_url)
       {
-        html_context.push_str(&format!(
+        let _ = write!(
+          &mut html_context,
           "<blockquote>This page {} redirects to <a \
            href=\"{}\">{}</a>.</blockquote>",
           if status == germ::request::Status::PermanentRedirect {
@@ -198,15 +210,18 @@ pub async fn default(
           },
           url,
           url
-        ));
+        );
       }
 
       html_context.push_str(&gemini_html.1);
     }
-    _ => html_context.push_str(&format!("<p>{}</p>", response.meta())),
+    _ => {
+      let _ = write!(&mut html_context, "<p>{}</p>", response.meta());
+    }
   }
 
-  html_context.push_str(&format!(
+  let _ = write!(
+    &mut html_context,
     "<details>\n<summary>Proxy Information</summary>
 <dl>
 <dt>Original URL</dt><dd><a \
@@ -233,7 +248,7 @@ pub async fn default(
     convert_time_taken.as_nanos() as f64 / 1_000_000.0,
     format_args!("/tree/{}", env!("VERGEN_GIT_SHA")),
     env!("VERGEN_GIT_SHA").get(0..5).unwrap_or("UNKNOWN"),
-  ));
+  );
 
   if let Ok(plain_texts) = var("PLAIN_TEXT_ROUTE") {
     if plain_texts.split(',').any(|r| {
