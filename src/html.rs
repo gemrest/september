@@ -51,11 +51,14 @@ pub fn from_gemini(
 
     links.contains(&url.path().to_string()) || links.contains(&"*".to_string())
   };
-  let mut in_condense_links_flag_trap = true;
   let condensible_headings_value =
     var("CONDENSE_LINKS_AT_HEADINGS").unwrap_or_default();
-  let condensible_headings =
-    condensible_headings_value.split(',').collect::<Vec<_>>();
+  let condensible_headings = if condensible_headings_value.is_empty() {
+    vec![]
+  } else {
+    condensible_headings_value.split(',').collect::<Vec<_>>()
+  };
+  let mut in_condense_links_flag_trap = !condensible_headings.is_empty();
 
   for node in ast {
     if condensible_headings.contains(&node.to_gemtext().as_str()) {
