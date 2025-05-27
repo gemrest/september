@@ -115,7 +115,7 @@ Only available in styled routes
 HEADER="This string will show up at the top of my proxied capsule."
 ```
 
-## `EMBED_IMAGES
+## `EMBED_IMAGES`
 
 Embed images in the HTML response if a link to an image is found
 
