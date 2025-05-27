@@ -269,32 +269,42 @@ pub async fn default(
 }
 
 fn path_matches_pattern(pattern: &str, path: &str) -> bool {
-  let parts: Vec<&str> = pattern.split('*').collect();
-  let mut position = 0;
-
-  if !pattern.starts_with('*') {
-    if let Some(part) = parts.first() {
-      if !path.starts_with(part) {
-        return false;
-      }
-
-      position = part.len();
-    }
+  if !pattern.contains('*') {
+    return path == pattern;
   }
 
-  for part in &parts[1..parts.len() - 1] {
-    if let Some(found_position) = path[position..].find(part) {
-      position += found_position + part.len();
+  let parts: Vec<&str> = pattern.split('*').collect();
+  let mut position = if pattern.starts_with('*') {
+    0
+  } else {
+    let first = parts.first().unwrap();
+
+    if !path.starts_with(first) {
+      return false;
+    }
+
+    first.len()
+  };
+
+  let mid_end = parts.len().saturating_sub(1);
+
+  for part in &parts[1..mid_end] {
+    if part.is_empty() {
+      continue;
+    }
+
+    if let Some(found) = path[position..].find(part) {
+      position += found + part.len();
     } else {
       return false;
     }
   }
 
   if !pattern.ends_with('*') {
-    if let Some(part) = parts.last() {
-      if !path[position..].ends_with(part) {
-        return false;
-      }
+    let last = parts.last().unwrap();
+
+    if !path[position..].ends_with(last) {
+      return false;
     }
   }
 
