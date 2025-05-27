@@ -239,7 +239,7 @@ pub fn from_gemini(
         let _ = write!(
           &mut html,
           r#"{}<a href="{}">{}</a>"#,
-          if condense_links { "" } else { GEMINI_FRAGMENT },
+          GEMINI_FRAGMENT,
           href,
           safe(text.as_ref().unwrap_or(to)).trim(),
         );
