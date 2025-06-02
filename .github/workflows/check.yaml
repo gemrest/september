@@ -20,7 +20,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.78.0
+          toolchain: stable
           components: rustfmt, clippy
           override: true
       - name: Check ✅
