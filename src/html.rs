@@ -1,4 +1,8 @@
-use {germ::ast::Node, std::env::var, std::fmt::Write, url::Url};
+use {
+  germ::ast::Node,
+  std::{env::var, fmt::Write},
+  url::Url,
+};
 
 fn link_from_host_href(url: &Url, href: &str) -> Option<String> {
   Some(format!(
