@@ -35,7 +35,7 @@ async fn main() -> std::io::Result<()> {
     var("PORT").map_or(80, |port| match port.parse::<_>() {
       Ok(port) => port,
       Err(e) => {
-        warn!("could not use PORT from environment variables: {}", e);
+        warn!("could not use PORT from environment variables: {e}");
         warn!("proceeding with default port: 80");
 
         80
