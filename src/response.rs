@@ -93,6 +93,16 @@ pub async fn default(
 
   timer = Instant::now();
 
+  if response.meta().starts_with("image/") {
+    if let Some(content_bytes) = &response.content_bytes() {
+      return Ok(
+        HttpResponse::build(actix_web::http::StatusCode::OK)
+          .content_type(response.meta().as_ref())
+          .body(content_bytes.to_vec()),
+      );
+    }
+  }
+
   let mut html_context = if configuration.is_raw() {
     String::new()
   } else {

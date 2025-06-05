@@ -22,7 +22,7 @@ opt-level = 3
 
 [dependencies]
 # Gemini
-germ = { version = "0.4.6", features = ["ast", "meta"] }
+germ = { version = "0.4.7", features = ["ast", "meta"] }
 
 # HTTP
 actix-web = "4.11.0"
