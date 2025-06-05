@@ -856,9 +856,9 @@ dependencies = [
 
 [[package]]
 name = "germ"
-version = "0.4.6"
+version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fb35c4432f7fdc139b68689e8a0741d118392566f8c63ca725971acaaa4b2ea"
+checksum = "603354f11eb56ae667d4f1ec32162b90a01c8c40c70195f5386f2fc65e5aa272"
 dependencies = [
  "anyhow",
  "rustls",
