@@ -57,3 +57,45 @@ pub fn from_path(
     )
   })
 }
+
+pub fn matches_pattern(pattern: &str, path: &str) -> bool {
+  if !pattern.contains('*') {
+    return path == pattern;
+  }
+
+  let parts: Vec<&str> = pattern.split('*').collect();
+  let mut position = if pattern.starts_with('*') {
+    0
+  } else {
+    let first = parts.first().unwrap();
+
+    if !path.starts_with(first) {
+      return false;
+    }
+
+    first.len()
+  };
+  let before_last = parts.len().saturating_sub(1);
+
+  for part in &parts[1..before_last] {
+    if part.is_empty() {
+      continue;
+    }
+
+    if let Some(found) = path[position..].find(part) {
+      position += found + part.len();
+    } else {
+      return false;
+    }
+  }
+
+  if !pattern.ends_with('*') {
+    let last = parts.last().unwrap();
+
+    if !path[position..].ends_with(last) {
+      return false;
+    }
+  }
+
+  true
+}
