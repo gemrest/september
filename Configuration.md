@@ -1,14 +1,14 @@
 # Configuration
 
-Configuration for September is done entirely through environment variables.
+The configuration for September is managed entirely through environment variables.
 
 ## `PORT`
 
-Bind September to a custom port
+Bind September to a custom port.
 
 Generally, you shouldn't touch this option if you are deploying using Docker.
 
-If no `PORT` is provided or the `PORT` could not be properly parsed as an
+If no `PORT` is provided or the `PORT` could not be parsed appropriately as an
 unsigned 16-bit integer, `PORT` will default to `80`.
 
 ```dotenv
@@ -39,7 +39,7 @@ CSS_EXTERNAL=https://cdnjs.cloudflare.com/ajax/libs/mini.css/3.0.1/mini-default.
 
 ## `KEEP_GEMINI`
 
-A comma-separated list of Gemini URL fragments to keep as is when proxying
+A comma-separated list of Gemini URL fragments to keep as is when proxying.
 
 Wildcards are supported using the `*` character, and exceptions can be made
 using the `!` character
@@ -52,7 +52,7 @@ KEEP_GEMINI=!*fuwn.me/*,gemini://*
 
 ## `HEAD`
 
-Insert any string at the end of the HTMl `<head>`
+Insert any string at the end of the HTML `<head>`
 
 ```dotenv
 HEAD=<script>/* September */</script><style>/* September */</style>
@@ -60,7 +60,7 @@ HEAD=<script>/* September */</script><style>/* September */</style>
 
 ## `PROXY_BY_DEFAULT`
 
-Control whether or not all Gemini URLs will be proxied
+Control whether all Gemini URLs are proxied.
 
 Similar to `KEEP_GEMINI_EXACT` and `KEEP_GEMINI_DOMAIN`, but global
 
@@ -91,7 +91,7 @@ PLAIN_TEXT_ROUTE=/robots.txt,/license.txt,*.xml
 
 ## `MATHJAX`
 
-Enable MathJax support for rendering LaTeX within `$` and `$$` delimiters
+Enable MathJax support for rendering LaTeX within `$` and `$$` delimiters.
 
 This configuration value defaults to `false`.
 
@@ -111,9 +111,9 @@ HEADER="This string will show up at the top of my proxied capsule."
 
 ## `EMBED_IMAGES`
 
-Embed images in the HTML response if a link to an image is found
+Embed images in the HTML response if a link to an image is found.
 
-A value of `1` will enable this feature, while keeping link to the image.
+A value of `1` will enable this feature, while keeping a link to the image.
 
 Any non-empty value other than `1` will enable this feature, while removing the link to the image.
 
@@ -161,13 +161,13 @@ PRIMARY_COLOUR=#ff0000
 ## `CONDENSE_LINKS_AT_HEADING`
 
 This configuration option is similar to `CONDENSE_LINKS`, but only condenses
-links found under certain headings.
+links found under specific headings.
 
 For instance, I condense the few links I have on my index page under the
 "# Fuwn[.me]" heading, and I condense my quick links/navigation panel under the
 "## Quick Links" heading.
 
-This way, I don't accidentally condense say my entire sitemap, which could be
+This way, I don't accidentally condense my entire sitemap, which could be
 hundreds of links long, but I do condense my quick links on every page.
 
 ```dotenv
