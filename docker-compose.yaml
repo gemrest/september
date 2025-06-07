@@ -5,7 +5,5 @@ services:
     environment:
       - "ROOT=gemini://fuwn.me"
       - "CSS_EXTERNAL=https://example.com/style.css"
-      - "KEEP_GEMINI_EXACT=gemini://fuwn.me/skills"
-      # - "KEEP_GEMINI_DOMAIN=fuwn.me"
       - "PROXY_BY_DEFAULT=true"
     image: "fuwn/september:latest"
