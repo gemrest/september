@@ -37,14 +37,17 @@ If no `CSS_EXTERNAL` value is provided, a default stylesheet of
 CSS_EXTERNAL=https://cdnjs.cloudflare.com/ajax/libs/mini.css/3.0.1/mini-default.min.css
 ```
 
-## `KEEP_GEMINI_EXACT`
+## `KEEP_GEMINI`
 
-A comma-separated list of Gemini URIs to keep as is when proxying.
+A comma-separated list of Gemini URL fragments to keep as is when proxying
+
+Wildcards are supported using the `*` character, and exceptions can be made
+using the `!` character
 
 ```dotenv
-# These two URIs will be kept pointing to their original Gemini URIs when
-# proxied instead of being replaced with their proxied equivalents.
-KEEP_GEMINI_EXACT=gemini://fuwn.me/something,gemini://fuwn.me/another
+# These rules ensure that all Gemini URLs will be left untouched in the proxied
+# HTML response except for URLs under the "fuwn.me" domain
+KEEP_GEMINI=!*fuwn.me/*,gemini://*
 ```
 
 ## `HEAD`
@@ -53,15 +56,6 @@ Insert any string at the end of the HTMl `<head>`
 
 ```dotenv
 HEAD=<script>/* September */</script><style>/* September */</style>
-```
-
-## `KEEP_GEMINI_DOMAIN`
-
-Similar to `KEEP_GEMINI_EXACT`, except matches based on entire domain or domains
-instead of exact URIs
-
-```dotenv
-KEEP_GEMINI_DOMAIN=fuwn.me,example.com
 ```
 
 ## `PROXY_BY_DEFAULT`
