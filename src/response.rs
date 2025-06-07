@@ -1,7 +1,7 @@
 pub mod configuration;
 
 use {
-  crate::url::from_path as url_from_path,
+  crate::url::{from_path as url_from_path, matches_pattern},
   actix_web::{Error, HttpResponse},
   std::{env::var, fmt::Write, time::Instant},
 };
@@ -262,8 +262,8 @@ pub async fn default(
 
   if let Ok(plain_texts) = var("PLAIN_TEXT_ROUTE") {
     if plain_texts.split(',').any(|r| {
-      path_matches_pattern(r, http_request.path())
-        || path_matches_pattern(r, http_request.path().trim_end_matches('/'))
+      matches_pattern(r, http_request.path())
+        || matches_pattern(r, http_request.path().trim_end_matches('/'))
     }) {
       return Ok(HttpResponse::Ok().body(
         response.content().as_ref().map_or_else(String::default, String::clone),
@@ -276,47 +276,4 @@ pub async fn default(
       .content_type(format!("text/html; charset={charset}"))
       .body(html_context),
   )
-}
-
-fn path_matches_pattern(pattern: &str, path: &str) -> bool {
-  if !pattern.contains('*') {
-    return path == pattern;
-  }
-
-  let parts: Vec<&str> = pattern.split('*').collect();
-  let mut position = if pattern.starts_with('*') {
-    0
-  } else {
-    let first = parts.first().unwrap();
-
-    if !path.starts_with(first) {
-      return false;
-    }
-
-    first.len()
-  };
-
-  let mid_end = parts.len().saturating_sub(1);
-
-  for part in &parts[1..mid_end] {
-    if part.is_empty() {
-      continue;
-    }
-
-    if let Some(found) = path[position..].find(part) {
-      position += found + part.len();
-    } else {
-      return false;
-    }
-  }
-
-  if !pattern.ends_with('*') {
-    let last = parts.last().unwrap();
-
-    if !path[position..].ends_with(last) {
-      return false;
-    }
-  }
-
-  true
 }

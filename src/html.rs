@@ -1,16 +1,21 @@
 use {
+  crate::url::matches_pattern,
   germ::ast::Node,
   std::{env::var, fmt::Write},
   url::Url,
 };
 
 fn link_from_host_href(url: &Url, href: &str) -> Option<String> {
-  Some(format!(
-    "gemini://{}{}{}",
-    url.domain()?,
-    { if href.starts_with('/') { "" } else { "/" } },
-    href
-  ))
+  if href.starts_with("/proxy/") {
+    Some(format!("gemini://{}", href.replace("/proxy/", "")))
+  } else {
+    Some(format!(
+      "gemini://{}{}{}",
+      url.domain()?,
+      { if href.starts_with('/') { "" } else { "/" } },
+      href
+    ))
+  }
 }
 
 fn safe(text: &str) -> String {
@@ -181,30 +186,26 @@ pub fn from_gemini(
           }
         }
 
-        if let Ok(keeps) = var("KEEP_GEMINI_EXACT") {
-          let mut keeps = keeps.split(',');
+        if let Ok(keeps) = var("KEEP_GEMINI") {
+          let patterns = keeps.split(',').collect::<Vec<_>>();
 
           if (href.starts_with('/') || !href.contains("://")) && !surface {
             let temporary_href = link_from_host_href(url, &href)?;
+            let should_exclude = patterns
+              .iter()
+              .filter(|p| p.starts_with('!'))
+              .any(|p| matches_pattern(&p[1..], &temporary_href));
 
-            if keeps.any(|k| k == &*temporary_href) {
-              href = temporary_href;
+            if !should_exclude {
+              let should_include = patterns
+                .iter()
+                .filter(|p| !p.starts_with('!'))
+                .any(|p| matches_pattern(p, &temporary_href));
+
+              if should_include {
+                href = temporary_href;
+              }
             }
-          }
-        }
-
-        if let Ok(keeps) = var("KEEP_GEMINI_DOMAIN") {
-          let host = if let Some(host) = url.host() {
-            host.to_string()
-          } else {
-            return None;
-          };
-
-          if (href.starts_with('/')
-            || !href.contains("://") && keeps.split(',').any(|k| k == &*host))
-            && !surface
-          {
-            href = link_from_host_href(url, &href)?;
           }
         }
 
