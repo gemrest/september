@@ -2,7 +2,7 @@
 
 [package]
 name = "september"
-version = "0.2.37"
+version = "0.3.0"
 authors = ["Fuwn <contact@fuwn.me>"]
 edition = "2021"
 description = "A simple and efficient Gemini-to-HTTP proxy."
