@@ -10,7 +10,13 @@
   --highlight: var(--primary);
   --logo: var(--primary);
   --font-monospace: "Fira Mono", monospace;
-  --font-size: 13.5px;
+  --font-size: auto;
+}
+
+@media (max-width: 600px) {
+  :root {
+    --font-size: 13.5px;
+  }
 }
 
 body {
