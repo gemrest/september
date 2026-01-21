@@ -1,3 +1,4 @@
+#[derive(Default)]
 pub struct Configuration {
   is_proxy:  bool,
   is_raw:    bool,
