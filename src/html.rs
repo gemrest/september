@@ -76,14 +76,18 @@ pub fn from_gemini(
 
     let align_adjacent_links = |html: &str| {
       if previous_link_count > 0 {
-        html
-          .chars()
-          .rev()
-          .collect::<String>()
-          .replacen(&GEMINI_FRAGMENT.chars().rev().collect::<String>(), "", 1)
-          .chars()
-          .rev()
-          .collect::<String>()
+        html.rfind(GEMINI_FRAGMENT).map_or_else(
+          || html.to_string(),
+          |position| {
+            let mut result =
+              String::with_capacity(html.len() - GEMINI_FRAGMENT.len());
+
+            result.push_str(&html[..position]);
+            result.push_str(&html[position + GEMINI_FRAGMENT.len()..]);
+
+            result
+          },
+        )
       } else {
         html.to_string()
       }
@@ -121,7 +125,7 @@ pub fn from_gemini(
         let _ = write!(&mut html, "<p>{}</p>", safe(text));
       }
       Node::Link { to, text } => {
-        let mut href = to.to_string();
+        let mut href = to.clone();
         let mut surface = false;
 
         if href.starts_with("./") || href.starts_with("../") {
@@ -133,7 +137,7 @@ pub fn from_gemini(
         if href.contains("://") && !href.starts_with("gemini://") {
           surface = true;
         } else if !href.contains("://") && href.contains(':') {
-          href = href.to_string();
+          // href contains a scheme-like pattern (e.g., mailto:), keep as-is
         } else if !href.starts_with("gemini://") && !href.starts_with('/') {
           href = format!(
             "{}/{}",
@@ -255,7 +259,7 @@ pub fn from_gemini(
         }
 
         if title.is_empty() && *level == 1 {
-          title = safe(text).to_string();
+          title = safe(text);
         }
 
         let _ = write!(
@@ -285,10 +289,7 @@ pub fn from_gemini(
         let _ = write!(&mut html, "<blockquote>{}</blockquote>", safe(text));
       }
       Node::PreformattedText { text, .. } => {
-        let mut new_text = text.to_string();
-
-        new_text.pop();
-
+        let new_text = text.strip_suffix('\n').unwrap_or(text);
         let _ = write!(&mut html, "<pre>{new_text}</pre>");
       }
       Node::Whitespace => {}
