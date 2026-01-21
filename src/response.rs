@@ -1,9 +1,12 @@
 pub mod configuration;
 
 use {
-  crate::url::{from_path as url_from_path, matches_pattern},
+  crate::{
+    environment::ENVIRONMENT,
+    url::{from_path as url_from_path, matches_pattern},
+  },
   actix_web::{Error, HttpResponse},
-  std::{env::var, fmt::Write, time::Instant},
+  std::{fmt::Write, time::Instant},
 };
 
 const CSS: &str = include_str!("../default.css");
@@ -142,11 +145,8 @@ pub async fn default(
     );
   }
 
-  if let Ok(css) = var("CSS_EXTERNAL") {
-    let stylesheets =
-      css.split(',').filter(|s| !s.is_empty()).collect::<Vec<_>>();
-
-    for stylesheet in stylesheets {
+  if let Some(css) = &ENVIRONMENT.css_external {
+    for stylesheet in css.split(',').filter(|s| !s.is_empty()) {
       let _ = write!(
         &mut html_context,
         "<link rel=\"stylesheet\" type=\"text/css\" href=\"{stylesheet}\">",
@@ -158,7 +158,7 @@ pub async fn default(
       r#"<link rel="stylesheet" href="https://latex.vercel.app/style.css"><style>{CSS}</style>"#
     );
 
-    if let Ok(primary) = var("PRIMARY_COLOUR") {
+    if let Some(primary) = &ENVIRONMENT.primary_colour {
       let _ = write!(
         &mut html_context,
         "<style>:root {{ --primary: {primary} }}</style>"
@@ -171,16 +171,14 @@ pub async fn default(
     }
   }
 
-  if let Ok(favicon) = var("FAVICON_EXTERNAL") {
+  if let Some(favicon) = &ENVIRONMENT.favicon_external {
     let _ = write!(
       &mut html_context,
       "<link rel=\"icon\" type=\"image/x-icon\" href=\"{favicon}\">",
     );
   }
 
-  if var("MATHJAX").unwrap_or_else(|_| "true".to_string()).to_lowercase()
-    == "true"
-  {
+  if ENVIRONMENT.mathjax {
     html_context.push_str(
       r#"<script type="text/javascript" id="MathJax-script" async
         src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
@@ -188,15 +186,15 @@ pub async fn default(
     );
   }
 
-  if let Ok(head) = var("HEAD") {
-    html_context.push_str(&head);
+  if let Some(head) = &ENVIRONMENT.head {
+    html_context.push_str(head);
   }
 
   let _ = write!(&mut html_context, "<title>{gemini_title}</title>");
   let _ = write!(&mut html_context, "</head><body>");
 
   if !http_request.path().starts_with("/proxy") {
-    if let Ok(header) = var("HEADER") {
+    if let Some(header) = &ENVIRONMENT.header {
       let _ = write!(
         &mut html_context,
         "<big><blockquote>{header}</blockquote></big>"
@@ -260,7 +258,7 @@ pub async fn default(
     env!("VERGEN_GIT_SHA").get(0..5).unwrap_or("UNKNOWN"),
   );
 
-  if let Ok(plain_texts) = var("PLAIN_TEXT_ROUTE") {
+  if let Some(plain_texts) = &ENVIRONMENT.plain_text_route {
     if plain_texts.split(',').any(|r| {
       matches_pattern(r, http_request.path())
         || matches_pattern(r, http_request.path().trim_end_matches('/'))
