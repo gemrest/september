@@ -63,11 +63,11 @@ pub fn matches_pattern(pattern: &str, path: &str) -> bool {
     return path == pattern;
   }
 
-  let parts: Vec<&str> = pattern.split('*').collect();
+  let mut parts = pattern.split('*').peekable();
   let mut position = if pattern.starts_with('*') {
     0
   } else {
-    let first = parts.first().unwrap();
+    let first = parts.next().unwrap_or("");
 
     if !path.starts_with(first) {
       return false;
@@ -75,25 +75,20 @@ pub fn matches_pattern(pattern: &str, path: &str) -> bool {
 
     first.len()
   };
-  let before_last = parts.len().saturating_sub(1);
 
-  for part in &parts[1..before_last] {
-    if part.is_empty() {
-      continue;
-    }
+  while let Some(part) = parts.next() {
+    let is_last = parts.peek().is_none();
 
-    if let Some(found) = path[position..].find(part) {
-      position += found + part.len();
-    } else {
-      return false;
-    }
-  }
-
-  if !pattern.ends_with('*') {
-    let last = parts.last().unwrap();
-
-    if !path[position..].ends_with(last) {
-      return false;
+    if is_last {
+      if !pattern.ends_with('*') && !path[position..].ends_with(part) {
+        return false;
+      }
+    } else if !part.is_empty() {
+      if let Some(found) = path[position..].find(part) {
+        position += found + part.len();
+      } else {
+        return false;
+      }
     }
   }
 
