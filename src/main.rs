@@ -20,9 +20,13 @@ use {actix_web::web, response::default, std::env::var};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-  std::env::set_var("RUST_LOG", "actix_web=info");
   dotenv::dotenv().ok();
-  pretty_env_logger::init();
+  pretty_env_logger::formatted_builder()
+    .parse_filters(
+      &std::env::var("RUST_LOG")
+        .unwrap_or_else(|_| "actix_web=info".to_string()),
+    )
+    .init();
 
   actix_web::HttpServer::new(move || {
     actix_web::App::new()
