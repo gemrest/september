@@ -232,21 +232,14 @@ pub async fn default(
     &mut html_context,
     "<details>\n<summary>Proxy Information</summary>
 <dl>
-<dt>Original URL</dt><dd><a \
-     href=\"{}\">{0}</a></dd>
-<dt>Status Code</dt>
-<dd>{} ({})</dd>
-<dt>Meta</dt><dd><code>{}</code></dd>\
-
-<dt>Capsule Response Time</dt>
-<dd>{} milliseconds</dd>
-<dt>Gemini-to-HTML \
-     Time</dt>
-<dd>{} milliseconds</dd>
+<dt>Original URL</dt><dd><a href=\"{}\">{0}</a></dd>
+<dt>Status Code</dt><dd>{} ({})</dd>
+<dt>Meta</dt><dd><code>{}</code></dd>
+<dt>Capsule Response Time</dt><dd>{} milliseconds</dd>
+<dt>Gemini-to-HTML Time</dt><dd>{} milliseconds</dd>
 </dl>
-<p>This content has been proxied \
-     by <a href=\"https://github.com/gemrest/september{}\">September \
-     ({})</a>.</p>
+<p>This content has been proxied by <a \
+     href=\"https://github.com/gemrest/september{}\">September ({})</a>.</p>
 </details></body></html>",
     url,
     response.status(),
