@@ -140,7 +140,7 @@ pub async fn default(
 
     return Ok(
       HttpResponse::Ok()
-        .content_type(format!("text/html; charset={}", meta.mime()))
+        .content_type(format!("text/html; charset={charset}"))
         .body(html_context),
     );
   }
