@@ -42,16 +42,7 @@ pub fn from_path(
   } else {
     format!(
       "{}{}{}",
-      {
-        std::env::var("ROOT").unwrap_or_else(|_| {
-          warn!(
-            "could not use ROOT from environment variables, proceeding with \
-             default root: gemini://fuwn.me"
-          );
-
-          "gemini://fuwn.me".to_string()
-        })
-      },
+      &crate::environment::ENVIRONMENT.root,
       path,
       if fallback { "/" } else { "" }
     )

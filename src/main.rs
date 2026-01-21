@@ -10,6 +10,7 @@
 #![recursion_limit = "128"]
 #![allow(clippy::cast_precision_loss)]
 
+mod environment;
 mod html;
 mod response;
 mod url;

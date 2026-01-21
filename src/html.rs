@@ -1,7 +1,7 @@
 use {
-  crate::url::matches_pattern,
+  crate::{environment::ENVIRONMENT, url::matches_pattern},
   germ::ast::Node,
-  std::{env::var, fmt::Write},
+  std::fmt::Write,
   url::Url,
 };
 
@@ -47,26 +47,14 @@ pub fn from_gemini(
   let mut title = String::new();
   let mut previous_link = false;
   let mut previous_link_count = 0;
-  let condense_links = {
-    let links = var("CONDENSE_LINKS").map_or_else(
-      |_| vec![],
-      |condense_links| {
-        condense_links
-          .split(',')
-          .map(std::string::ToString::to_string)
-          .collect()
-      },
-    );
-
-    links.contains(&url.path().to_string()) || links.contains(&"*".to_string())
-  };
-  let condensible_headings_value =
-    var("CONDENSE_LINKS_AT_HEADINGS").unwrap_or_default();
-  let condensible_headings = if condensible_headings_value.is_empty() {
-    vec![]
-  } else {
-    condensible_headings_value.split(',').collect::<Vec<_>>()
-  };
+  let condense_links =
+    ENVIRONMENT.condense_links.contains(&url.path().to_string())
+      || ENVIRONMENT.condense_links.contains(&"*".to_string());
+  let condensible_headings = ENVIRONMENT
+    .condense_links_at_headings
+    .iter()
+    .map(String::as_str)
+    .collect::<Vec<_>>();
   let mut in_condense_links_flag_trap = !condensible_headings.is_empty();
 
   for node in ast {
@@ -154,10 +142,7 @@ pub fn from_gemini(
           href = link_from_host_href(url, &href)?;
         }
 
-        if var("PROXY_BY_DEFAULT")
-          .unwrap_or_else(|_| "true".to_string())
-          .to_lowercase()
-          == "true"
+        if ENVIRONMENT.proxy_by_default
           && href.contains("gemini://")
           && !surface
         {
@@ -190,9 +175,7 @@ pub fn from_gemini(
           }
         }
 
-        if let Ok(keeps) = var("KEEP_GEMINI") {
-          let patterns = keeps.split(',').collect::<Vec<_>>();
-
+        if let Some(patterns) = &ENVIRONMENT.keep_gemini {
           if (href.starts_with('/') || !href.contains("://")) && !surface {
             let temporary_href = link_from_host_href(url, &href)?;
             let should_exclude = patterns
@@ -213,7 +196,7 @@ pub fn from_gemini(
           }
         }
 
-        if let Ok(embed_images) = var("EMBED_IMAGES") {
+        if let Some(embed_images) = &ENVIRONMENT.embed_images {
           if let Some(extension) = std::path::Path::new(&href).extension() {
             if extension == "png"
               || extension == "jpg"
