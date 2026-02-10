@@ -158,6 +158,38 @@ PRIMARY_COLOUR=red
 PRIMARY_COLOUR=#ff0000
 ```
 
+## `HTTP09`
+
+Enable a separate HTTP/0.9 TCP server alongside the main HTTP server
+
+HTTP/0.9 is the simplest version of HTTP. Requests are a bare `GET /path` line,
+and responses are the raw body with no status line or headers. The server returns
+the proxied Gemini content directly (text/gemini for text, raw bytes for images).
+
+This configuration value defaults to `false`.
+
+```dotenv
+HTTP09=true
+```
+
+## `HTTP09_PORT`
+
+Bind the HTTP/0.9 server to a custom port
+
+If no `HTTP09_PORT` is provided or it could not be parsed appropriately as an
+unsigned 16-bit integer, `HTTP09_PORT` will default to `90`.
+
+```dotenv
+HTTP09_PORT=9009
+```
+
+### Testing
+
+```sh
+echo "GET /" | nc localhost 9009
+curl --http0.9 http://localhost:9009/
+```
+
 ## `CONDENSE_LINKS_AT_HEADING`
 
 This configuration option is similar to `CONDENSE_LINKS`, but only condenses
