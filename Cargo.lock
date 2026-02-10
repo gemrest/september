@@ -2142,6 +2142,7 @@ dependencies = [
  "germ",
  "log",
  "pretty_env_logger",
+ "tokio",
  "url",
  "vergen",
 ]

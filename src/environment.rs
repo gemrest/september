@@ -17,6 +17,8 @@ pub struct Environment {
   pub proxy_by_default:           bool,
   pub keep_gemini:                Option<Vec<String>>,
   pub embed_images:               Option<String>,
+  pub http09:                     bool,
+  pub http09_port:                u16,
 }
 
 impl Environment {
@@ -51,6 +53,13 @@ impl Environment {
         .ok()
         .map(|s| s.split(',').map(String::from).collect()),
       embed_images:               std::env::var("EMBED_IMAGES").ok(),
+      http09:                     std::env::var("HTTP09")
+        .map(|v| v.to_lowercase() == "true")
+        .unwrap_or(false),
+      http09_port:                std::env::var("HTTP09_PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(90),
     }
   }
 }
