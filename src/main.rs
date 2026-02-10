@@ -12,6 +12,7 @@
 
 mod environment;
 mod html;
+mod http09;
 mod response;
 mod url;
 
@@ -28,6 +29,10 @@ async fn main() -> std::io::Result<()> {
         .unwrap_or_else(|_| "actix_web=info".to_string()),
     )
     .init();
+
+  if environment::ENVIRONMENT.http09 {
+    tokio::spawn(http09::serve());
+  }
 
   actix_web::HttpServer::new(move || {
     actix_web::App::new()

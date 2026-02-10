@@ -27,6 +27,9 @@ germ = { version = "0.4.7", features = ["ast", "meta"] }
 # HTTP
 actix-web = "4.11.0"
 
+# Async Runtime
+tokio = { version = "1", features = ["net", "io-util"] }
+
 # Logging
 pretty_env_logger = "0.5.0"
 log = "0.4.27"
