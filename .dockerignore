@@ -3,6 +3,7 @@
 !.git/
 !src/
 !build.rs
-!Cargo.*
+!Cargo.toml
+!Cargo.lock
+!Dockerfile
 !default.css
-
