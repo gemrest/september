@@ -11,9 +11,24 @@ use {
 
 const CSS: &str = include_str!("../default.css");
 
+#[derive(serde::Deserialize)]
+pub struct InputSubmission {
+  input:  String,
+  target: Option<String>,
+}
+
+fn html_escape(input: &str) -> String {
+  input
+    .replace('&', "&amp;")
+    .replace('"', "&quot;")
+    .replace('<', "&lt;")
+    .replace('>', "&gt;")
+}
+
 #[allow(clippy::future_not_send, clippy::too_many_lines)]
 pub async fn default(
   http_request: actix_web::HttpRequest,
+  input_submission: Option<actix_web::web::Form<InputSubmission>>,
 ) -> Result<HttpResponse, Error> {
   if ["/proxy", "/proxy/", "/x", "/x/", "/raw", "/raw/", "/nocss", "/nocss/"]
     .contains(&http_request.path())
@@ -28,7 +43,19 @@ pub async fn default(
   }
 
   let mut configuration = configuration::Configuration::new();
-  let url = match url_from_path(
+  let submitted_input =
+    if *http_request.method() == actix_web::http::Method::POST {
+      input_submission.as_ref().map(|submission| submission.input.clone())
+    } else {
+      None
+    };
+  let submitted_target =
+    if *http_request.method() == actix_web::http::Method::POST {
+      input_submission.as_ref().and_then(|submission| submission.target.clone())
+    } else {
+      None
+    };
+  let mut url = match url_from_path(
     &format!("{}{}", http_request.path(), {
       if !http_request.query_string().is_empty()
         || http_request.uri().to_string().ends_with('?')
@@ -50,6 +77,25 @@ pub async fn default(
       );
     }
   };
+
+  if let Some(target) = submitted_target {
+    if let Ok(parsed_target) = url::Url::parse(&target) {
+      if parsed_target.scheme() == "gemini" {
+        url = parsed_target;
+      }
+    }
+  }
+
+  if let Some(input) = submitted_input {
+    let input = input
+      .replace("\r\n", "\n")
+      .replace('\r', "\n")
+      .replace('\t', "%09")
+      .replace('\n', "%0A");
+
+    url.set_query(Some(&input));
+  }
+
   let mut timer = Instant::now();
   let mut response = match germ::request::request(&url).await {
     Ok(response) => response,
@@ -104,6 +150,128 @@ pub async fn default(
           .body(content_bytes.to_vec()),
       );
     }
+  }
+
+  if *response.status() == germ::request::Status::Input
+    || *response.status() == germ::request::Status::SensitiveInput
+  {
+    if configuration.is_raw() {
+      return Ok(
+        HttpResponse::Ok()
+          .content_type(format!("text/plain; charset={charset}"))
+          .body(response.meta().to_string()),
+      );
+    }
+
+    let mut html_context = format!(
+      r#"<!DOCTYPE html><html{}><head><meta name="viewport" content="width=device-width, initial-scale=1.0">"#,
+      if language.is_empty() {
+        String::new()
+      } else {
+        format!(" lang=\"{language}\"")
+      }
+    );
+
+    if !configuration.is_no_css() {
+      if let Some(css) = &ENVIRONMENT.css_external {
+        for stylesheet in css.split(',').filter(|s| !s.is_empty()) {
+          let _ = write!(
+            &mut html_context,
+            "<link rel=\"stylesheet\" type=\"text/css\" href=\"{stylesheet}\">",
+          );
+        }
+      } else {
+        let _ = write!(
+          &mut html_context,
+          r#"<link rel="stylesheet" href="https://latex.vercel.app/style.css"><style>{CSS}</style>"#
+        );
+
+        if let Some(primary) = &ENVIRONMENT.primary_colour {
+          let _ = write!(
+            &mut html_context,
+            "<style>:root {{ --primary: {primary} }}</style>"
+          );
+        } else {
+          let _ = write!(
+            &mut html_context,
+            "<style>:root {{ --primary: var(--base0D); }}</style>"
+          );
+        }
+      }
+    }
+
+    if let Some(favicon) = &ENVIRONMENT.favicon_external {
+      let _ = write!(
+        &mut html_context,
+        "<link rel=\"icon\" type=\"image/x-icon\" href=\"{favicon}\">",
+      );
+    }
+
+    if let Some(head) = &ENVIRONMENT.head {
+      html_context.push_str(head);
+    }
+
+    let _ = write!(
+      &mut html_context,
+      "<title>{}</title></head><body>",
+      html_escape(&response.meta()),
+    );
+
+    if !http_request.path().starts_with("/proxy") {
+      if let Some(header) = &ENVIRONMENT.header {
+        let _ = write!(
+          &mut html_context,
+          "<big><blockquote>{header}</blockquote></big>"
+        );
+      }
+    }
+
+    if let (Some(status), Some(redirected_to)) =
+      (redirect_response_status, redirect_url.clone())
+    {
+      let _ = write!(
+        &mut html_context,
+        "<blockquote>This page {} redirects to <a \
+         href=\"{}\">{}</a>.</blockquote>",
+        if status == germ::request::Status::PermanentRedirect {
+          "permanently"
+        } else {
+          "temporarily"
+        },
+        redirected_to,
+        redirected_to
+      );
+    }
+
+    let input_url = redirect_url.unwrap_or_else(|| url.clone());
+    let input_field =
+      if *response.status() == germ::request::Status::SensitiveInput {
+        "<input name=\"input\" type=\"password\" autofocus>"
+      } else {
+        "<textarea name=\"input\" rows=\"8\" autofocus></textarea>"
+      };
+    let _ = write!(
+      &mut html_context,
+      "<p>{}</p><form method=\"post\" action=\"{}\"><input type=\"hidden\" \
+       name=\"target\" value=\"{}\">{}<button \
+       type=\"submit\">Submit</button></form></body></html>",
+      html_escape(&response.meta()),
+      html_escape(&http_request.uri().to_string()),
+      html_escape(input_url.as_ref()),
+      input_field,
+    );
+    let mut response_builder = HttpResponse::Ok();
+
+    if *response.status() == germ::request::Status::SensitiveInput {
+      response_builder
+        .insert_header((actix_web::http::header::CACHE_CONTROL, "no-store"));
+    }
+
+    return Ok(
+      response_builder
+        .content_type(format!("text/html; charset={charset}"))
+        .body(html_context),
+    );
   }
 
   let mut html_context = if configuration.is_raw() {

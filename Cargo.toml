@@ -43,6 +43,9 @@ url = "2.5.4"
 # Markdown Encoding
 comrak = "0.29.0"
 
+# Form Parsing
+serde = { version = "1", features = ["derive"] }
+
 [build-dependencies]
 # Compile-time Environment Variables
 vergen = { version = "8.3.2", features = ["git", "gitoxide"] }
