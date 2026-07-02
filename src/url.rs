@@ -7,17 +7,17 @@ pub fn from_path(
   Url::try_from(&*if let Some(remainder) =
     route_remainder(path, "/proxy").or_else(|| route_remainder(path, "/x"))
   {
-    configuration.set_proxy(true);
+    configuration.proxy = true;
 
     format!("gemini://{remainder}")
   } else if let Some(remainder) = route_remainder(path, "/raw") {
-    configuration.set_proxy(true);
-    configuration.set_raw(true);
+    configuration.proxy = true;
+    configuration.raw = true;
 
     format!("gemini://{remainder}")
   } else if let Some(remainder) = route_remainder(path, "/nocss") {
-    configuration.set_proxy(true);
-    configuration.set_no_css(true);
+    configuration.proxy = true;
+    configuration.no_css = true;
 
     format!("gemini://{remainder}")
   } else {

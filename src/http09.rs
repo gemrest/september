@@ -1,5 +1,6 @@
 use {
   crate::{environment::ENVIRONMENT, url::from_path},
+  log::{error, info, warn},
   tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     net::TcpListener,
@@ -49,7 +50,8 @@ async fn handle(
   reader.read_line(&mut request_line).await?;
 
   let path = parse_request(&request_line)?;
-  let mut configuration = crate::response::configuration::Configuration::new();
+  let mut configuration =
+    crate::response::configuration::Configuration::default();
   let url = from_path(&path, &mut configuration)?;
   let mut response = germ::request::request(&url).await?;
 

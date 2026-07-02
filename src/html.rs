@@ -156,7 +156,7 @@ pub fn from_gemini(
           )
           .replace("//", "/");
           href = format!("gemini://{href}");
-        } else if href.starts_with('/') || !href.contains("://") {
+        } else if href.starts_with('/') {
           href = link_from_host_href(url, &href)?;
         }
 
@@ -164,8 +164,8 @@ pub fn from_gemini(
           && href.contains("gemini://")
           && !surface
         {
-          if (configuration.is_proxy())
-            || configuration.is_no_css()
+          if configuration.proxy
+            || configuration.no_css
             || href
               .trim_start_matches("gemini://")
               .trim_end_matches('/')
@@ -176,7 +176,7 @@ pub fn from_gemini(
           {
             href = format!(
               "/{}/{}",
-              if configuration.is_no_css() { "nocss" } else { "proxy" },
+              if configuration.no_css { "nocss" } else { "proxy" },
               href.trim_start_matches("gemini://")
             );
           } else {
@@ -256,7 +256,7 @@ pub fn from_gemini(
         }
 
         if title.is_empty() && *level == 1 {
-          title = safe(text);
+          title = safe(text).trim().to_string();
         }
 
         let _ = write!(

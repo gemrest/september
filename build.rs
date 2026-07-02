@@ -47,5 +47,5 @@ fn main() {
 
   let sha = git_sha().unwrap_or_else(|| "UNKNOWN".to_string());
 
-  println!("cargo:rustc-env=VERGEN_GIT_SHA={sha}");
+  println!("cargo:rustc-env=GIT_SHA={sha}");
 }

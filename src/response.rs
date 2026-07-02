@@ -31,6 +31,97 @@ fn percent_encode_query(input: &str) -> String {
   encoded
 }
 
+fn document_head(language: &str, title: &str, include_css: bool) -> String {
+  let mut head = format!(
+    r#"<!DOCTYPE html><html{}><head><meta name="viewport" content="width=device-width, initial-scale=1.0">"#,
+    if language.is_empty() {
+      String::new()
+    } else {
+      format!(" lang=\"{language}\"")
+    }
+  );
+
+  if include_css {
+    if let Some(css) = &ENVIRONMENT.css_external {
+      for stylesheet in css.split(',').filter(|s| !s.is_empty()) {
+        let _ = write!(
+          &mut head,
+          "<link rel=\"stylesheet\" type=\"text/css\" href=\"{stylesheet}\">",
+        );
+      }
+    } else {
+      let _ = write!(
+        &mut head,
+        r#"<link rel="stylesheet" href="https://latex.vercel.app/style.css"><style>{CSS}</style>"#
+      );
+      let _ = write!(
+        &mut head,
+        "<style>:root {{ --primary: {} }}</style>",
+        ENVIRONMENT.primary_colour.as_deref().unwrap_or("var(--base0D)")
+      );
+    }
+
+    if ENVIRONMENT.mathjax {
+      head.push_str(
+        r#"<script type="text/javascript" id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"
+        integrity="sha384-Wuix6BuhrWbjDBs24bXrjf4ZQ5aFeFWBuKkFekO2t8xFU0iNaLQfp2K6/1Nxveei"
+        crossorigin="anonymous">
+    </script>"#,
+      );
+    }
+  }
+
+  if let Some(favicon) = &ENVIRONMENT.favicon_external {
+    let _ = write!(
+      &mut head,
+      "<link rel=\"icon\" type=\"image/x-icon\" href=\"{favicon}\">",
+    );
+  }
+
+  if let Some(head_content) = &ENVIRONMENT.head {
+    head.push_str(head_content);
+  }
+
+  let _ = write!(&mut head, "<title>{title}</title></head><body>");
+
+  head
+}
+
+fn body_preamble(
+  request_path: &str,
+  redirect_response_status: Option<germ::request::Status>,
+  redirect_url: Option<&url::Url>,
+) -> String {
+  let mut preamble = String::new();
+
+  if !request_path.starts_with("/proxy") {
+    if let Some(header) = &ENVIRONMENT.header {
+      let _ =
+        write!(&mut preamble, "<big><blockquote>{header}</blockquote></big>");
+    }
+  }
+
+  if let (Some(status), Some(redirected_to)) =
+    (redirect_response_status, redirect_url)
+  {
+    let _ = write!(
+      &mut preamble,
+      "<blockquote>This page {} redirects to <a \
+       href=\"{}\">{}</a>.</blockquote>",
+      if status == germ::request::Status::PermanentRedirect {
+        "permanently"
+      } else {
+        "temporarily"
+      },
+      redirected_to,
+      redirected_to
+    );
+  }
+
+  preamble
+}
+
 #[derive(serde::Deserialize)]
 pub struct InputSubmission {
   input:  String,
@@ -54,7 +145,7 @@ pub async fn default(
       "));
   }
 
-  let mut configuration = configuration::Configuration::new();
+  let mut configuration = configuration::Configuration::default();
   let submitted_input =
     if *http_request.method() == actix_web::http::Method::POST {
       input_submission.as_ref().map(|submission| submission.input.clone())
@@ -189,7 +280,7 @@ pub async fn default(
   if *response.status() == germ::request::Status::Input
     || *response.status() == germ::request::Status::SensitiveInput
   {
-    if configuration.is_raw() {
+    if configuration.raw {
       return Ok(
         HttpResponse::Ok()
           .content_type(format!("text/plain; charset={charset}"))
@@ -197,85 +288,17 @@ pub async fn default(
       );
     }
 
-    let mut html_context = format!(
-      r#"<!DOCTYPE html><html{}><head><meta name="viewport" content="width=device-width, initial-scale=1.0">"#,
-      if language.is_empty() {
-        String::new()
-      } else {
-        format!(" lang=\"{language}\"")
-      }
+    let mut html_context = document_head(
+      &language,
+      &html_escape(&response.meta()),
+      !configuration.no_css,
     );
 
-    if !configuration.is_no_css() {
-      if let Some(css) = &ENVIRONMENT.css_external {
-        for stylesheet in css.split(',').filter(|s| !s.is_empty()) {
-          let _ = write!(
-            &mut html_context,
-            "<link rel=\"stylesheet\" type=\"text/css\" href=\"{stylesheet}\">",
-          );
-        }
-      } else {
-        let _ = write!(
-          &mut html_context,
-          r#"<link rel="stylesheet" href="https://latex.vercel.app/style.css"><style>{CSS}</style>"#
-        );
-
-        if let Some(primary) = &ENVIRONMENT.primary_colour {
-          let _ = write!(
-            &mut html_context,
-            "<style>:root {{ --primary: {primary} }}</style>"
-          );
-        } else {
-          let _ = write!(
-            &mut html_context,
-            "<style>:root {{ --primary: var(--base0D); }}</style>"
-          );
-        }
-      }
-    }
-
-    if let Some(favicon) = &ENVIRONMENT.favicon_external {
-      let _ = write!(
-        &mut html_context,
-        "<link rel=\"icon\" type=\"image/x-icon\" href=\"{favicon}\">",
-      );
-    }
-
-    if let Some(head) = &ENVIRONMENT.head {
-      html_context.push_str(head);
-    }
-
-    let _ = write!(
-      &mut html_context,
-      "<title>{}</title></head><body>",
-      html_escape(&response.meta()),
-    );
-
-    if !http_request.path().starts_with("/proxy") {
-      if let Some(header) = &ENVIRONMENT.header {
-        let _ = write!(
-          &mut html_context,
-          "<big><blockquote>{header}</blockquote></big>"
-        );
-      }
-    }
-
-    if let (Some(status), Some(redirected_to)) =
-      (redirect_response_status, redirect_url.clone())
-    {
-      let _ = write!(
-        &mut html_context,
-        "<blockquote>This page {} redirects to <a \
-         href=\"{}\">{}</a>.</blockquote>",
-        if status == germ::request::Status::PermanentRedirect {
-          "permanently"
-        } else {
-          "temporarily"
-        },
-        redirected_to,
-        redirected_to
-      );
-    }
+    html_context.push_str(&body_preamble(
+      http_request.path(),
+      redirect_response_status,
+      redirect_url.as_ref(),
+    ));
 
     let input_url = redirect_url.unwrap_or_else(|| url.clone());
     let input_field =
@@ -308,132 +331,41 @@ pub async fn default(
     );
   }
 
-  let mut html_context = if configuration.is_raw() {
-    String::new()
-  } else {
-    format!(
-      r#"<!DOCTYPE html><html{}><head><meta name="viewport" content="width=device-width, initial-scale=1.0">"#,
-      if language.is_empty() {
-        String::new()
-      } else {
-        format!(" lang=\"{language}\"")
-      }
-    )
-  };
-  let Some(gemini_html) =
+  if configuration.raw {
+    return Ok(
+      HttpResponse::build(http_status)
+        .content_type(format!("{}; charset={charset}", meta.mime()))
+        .body(
+          response
+            .content()
+            .as_ref()
+            .map_or_else(String::default, String::clone),
+        ),
+    );
+  }
+
+  let Some((gemini_title, gemini_body)) =
     crate::html::from_gemini(&response, &url, &configuration)
   else {
     return Ok(
       HttpResponse::Ok().body("could not convert Gemini content to HTML"),
     );
   };
-  let gemini_title = gemini_html.0;
   let convert_time_taken = timer.elapsed();
+  let mut html_context =
+    document_head(&language, &gemini_title, !configuration.no_css);
 
-  if configuration.is_raw() {
-    html_context.push_str(
-      &response.content().as_ref().map_or_else(String::default, String::clone),
-    );
+  html_context.push_str(&body_preamble(
+    http_request.path(),
+    redirect_response_status,
+    redirect_url.as_ref(),
+  ));
 
-    return Ok(
-      HttpResponse::build(http_status)
-        .content_type(format!("{}; charset={charset}", meta.mime()))
-        .body(html_context),
-    );
-  }
-
-  if configuration.is_no_css() {
-    html_context.push_str(&gemini_html.1);
-
-    return Ok(
-      HttpResponse::build(http_status)
-        .content_type(format!("text/html; charset={charset}"))
-        .body(html_context),
-    );
-  }
-
-  if let Some(css) = &ENVIRONMENT.css_external {
-    for stylesheet in css.split(',').filter(|s| !s.is_empty()) {
-      let _ = write!(
-        &mut html_context,
-        "<link rel=\"stylesheet\" type=\"text/css\" href=\"{stylesheet}\">",
-      );
-    }
-  } else if !configuration.is_no_css() {
-    let _ = write!(
-      &mut html_context,
-      r#"<link rel="stylesheet" href="https://latex.vercel.app/style.css"><style>{CSS}</style>"#
-    );
-
-    if let Some(primary) = &ENVIRONMENT.primary_colour {
-      let _ = write!(
-        &mut html_context,
-        "<style>:root {{ --primary: {primary} }}</style>"
-      );
-    } else {
-      let _ = write!(
-        &mut html_context,
-        "<style>:root {{ --primary: var(--base0D); }}</style>"
-      );
-    }
-  }
-
-  if let Some(favicon) = &ENVIRONMENT.favicon_external {
-    let _ = write!(
-      &mut html_context,
-      "<link rel=\"icon\" type=\"image/x-icon\" href=\"{favicon}\">",
-    );
-  }
-
-  if ENVIRONMENT.mathjax {
-    html_context.push_str(
-      r#"<script type="text/javascript" id="MathJax-script" async
-        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
-    </script>"#,
-    );
-  }
-
-  if let Some(head) = &ENVIRONMENT.head {
-    html_context.push_str(head);
-  }
-
-  let _ = write!(&mut html_context, "<title>{gemini_title}</title>");
-  let _ = write!(&mut html_context, "</head><body>");
-
-  if !http_request.path().starts_with("/proxy") {
-    if let Some(header) = &ENVIRONMENT.header {
-      let _ = write!(
-        &mut html_context,
-        "<big><blockquote>{header}</blockquote></big>"
-      );
-    }
-  }
-
-  match response.status() {
-    germ::request::Status::Success => {
-      if let (Some(status), Some(url)) =
-        (redirect_response_status, redirect_url)
-      {
-        let _ = write!(
-          &mut html_context,
-          "<blockquote>This page {} redirects to <a \
-           href=\"{}\">{}</a>.</blockquote>",
-          if status == germ::request::Status::PermanentRedirect {
-            "permanently"
-          } else {
-            "temporarily"
-          },
-          url,
-          url
-        );
-      }
-
-      html_context.push_str(&gemini_html.1);
-    }
-    _ => {
-      let _ =
-        write!(&mut html_context, "<p>{}</p>", html_escape(&response.meta()));
-    }
+  if *response.status() == germ::request::Status::Success {
+    html_context.push_str(&gemini_body);
+  } else {
+    let _ =
+      write!(&mut html_context, "<p>{}</p>", html_escape(&response.meta()));
   }
 
   let _ = write!(
@@ -455,8 +387,8 @@ pub async fn default(
     html_escape(&response.meta()),
     response_time_taken.as_nanos() as f64 / 1_000_000.0,
     convert_time_taken.as_nanos() as f64 / 1_000_000.0,
-    format_args!("/tree/{}", env!("VERGEN_GIT_SHA")),
-    env!("VERGEN_GIT_SHA").get(0..5).unwrap_or("UNKNOWN"),
+    format_args!("/tree/{}", env!("GIT_SHA")),
+    env!("GIT_SHA").get(0..5).unwrap_or("UNKNOWN"),
   );
 
   Ok(

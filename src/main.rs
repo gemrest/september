@@ -7,7 +7,6 @@
   unsafe_code
 )]
 #![deny(clippy::all, clippy::nursery, clippy::pedantic)]
-#![recursion_limit = "128"]
 #![allow(clippy::cast_precision_loss)]
 
 mod environment;
@@ -16,9 +15,7 @@ mod http09;
 mod response;
 mod url;
 
-#[macro_use] extern crate log;
-
-use {actix_web::web, response::default, std::env::var};
+use {actix_web::web, log::warn, response::default, std::env::var};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

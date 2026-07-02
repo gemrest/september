@@ -29,7 +29,6 @@ RUN set -eux; \
   test -n "${bin_path}"; \
   strip -s "${bin_path}"; \
   cp "${bin_path}" /source/september/september
-RUN strip -s /source/september/september
 
 FROM scratch AS runtime
 
