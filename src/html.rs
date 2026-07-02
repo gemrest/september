@@ -5,6 +5,28 @@ use {
   url::Url,
 };
 
+pub fn html_escape(input: &str) -> String {
+  input
+    .replace('&', "&amp;")
+    .replace('"', "&quot;")
+    .replace('<', "&lt;")
+    .replace('>', "&gt;")
+}
+
+// Browsers strip control characters when parsing URLs, so remove them before
+// checking the scheme to prevent smuggling (e.g. "java\tscript:").
+fn sanitize_href(href: &str) -> String {
+  let cleaned =
+    href.chars().filter(|c| !c.is_ascii_control()).collect::<String>();
+  let scheme = cleaned.split(':').next().unwrap_or("").to_ascii_lowercase();
+
+  if matches!(scheme.as_str(), "javascript" | "data" | "vbscript") {
+    return "#".to_string();
+  }
+
+  html_escape(&cleaned)
+}
+
 fn link_from_host_href(url: &Url, href: &str) -> Option<String> {
   if href.starts_with("/proxy/") {
     Some(format!("gemini://{}", href.replace("/proxy/", "")))
@@ -209,7 +231,7 @@ pub fn from_gemini(
                 let _ = writeln!(
                   &mut html,
                   "<p><a href=\"{}\">{}</a> <i>Embedded below</i></p>",
-                  href,
+                  sanitize_href(&href),
                   safe(text.as_ref().unwrap_or(to)),
                 );
               }
@@ -217,8 +239,8 @@ pub fn from_gemini(
               let _ = writeln!(
                 &mut html,
                 "<p><img src=\"{}\" alt=\"{}\" /></p>",
-                safe(&href),
-                safe(text.as_ref().unwrap_or(to)),
+                sanitize_href(&href),
+                html_escape(text.as_ref().unwrap_or(to)),
               );
 
               continue;
@@ -232,7 +254,7 @@ pub fn from_gemini(
           &mut html,
           r#"{}<a href="{}">{}</a>"#,
           GEMINI_FRAGMENT,
-          href,
+          sanitize_href(&href),
           safe(text.as_ref().unwrap_or(to)).trim(),
         );
       }
@@ -273,7 +295,7 @@ pub fn from_gemini(
       }
       Node::PreformattedText { text, .. } => {
         let new_text = text.strip_suffix('\n').unwrap_or(text);
-        let _ = write!(&mut html, "<pre>{new_text}</pre>");
+        let _ = write!(&mut html, "<pre>{}</pre>", html_escape(new_text));
       }
       Node::Whitespace => {}
     }

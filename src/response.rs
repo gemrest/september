@@ -3,6 +3,7 @@ pub mod configuration;
 use {
   crate::{
     environment::ENVIRONMENT,
+    html::html_escape,
     url::{from_path as url_from_path, matches_pattern},
   },
   actix_web::{Error, HttpResponse},
@@ -15,14 +16,6 @@ const CSS: &str = include_str!("../default.css");
 pub struct InputSubmission {
   input:  String,
   target: Option<String>,
-}
-
-fn html_escape(input: &str) -> String {
-  input
-    .replace('&', "&amp;")
-    .replace('"', "&quot;")
-    .replace('<', "&lt;")
-    .replace('>', "&gt;")
 }
 
 #[allow(clippy::future_not_send, clippy::too_many_lines)]
@@ -392,7 +385,8 @@ pub async fn default(
       html_context.push_str(&gemini_html.1);
     }
     _ => {
-      let _ = write!(&mut html_context, "<p>{}</p>", response.meta());
+      let _ =
+        write!(&mut html_context, "<p>{}</p>", html_escape(&response.meta()));
     }
   }
 
@@ -412,7 +406,7 @@ pub async fn default(
     url,
     response.status(),
     i32::from(*response.status()),
-    response.meta(),
+    html_escape(&response.meta()),
     response_time_taken.as_nanos() as f64 / 1_000_000.0,
     convert_time_taken.as_nanos() as f64 / 1_000_000.0,
     format_args!("/tree/{}", env!("VERGEN_GIT_SHA")),
