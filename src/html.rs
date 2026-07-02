@@ -107,12 +107,8 @@ pub fn from_gemini(
       && (!matches!(node, Node::Link { .. })
         || (!condense_links && !in_condense_links_flag_trap))
     {
-      if let Some(next) = ast.iter().skip_while(|n| n != &node).nth(1) {
-        if matches!(next, Node::Link { .. }) || previous_link {
-          html.push_str("<br />");
-        } else {
-          html.push_str("</p>");
-        }
+      if matches!(node, Node::Link { .. }) {
+        html.push_str("<br />");
       } else {
         html.push_str("</p>");
       }
@@ -212,7 +208,10 @@ pub fn from_gemini(
         }
 
         if let Some(embed_images) = &ENVIRONMENT.embed_images {
-          if let Some(extension) = std::path::Path::new(&href).extension() {
+          let href_path = href.split(['?', '#']).next().unwrap_or(&href);
+
+          if let Some(extension) = std::path::Path::new(href_path).extension()
+          {
             if extension == "png"
               || extension == "jpg"
               || extension == "jpeg"

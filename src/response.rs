@@ -11,6 +11,25 @@ use {
 };
 
 const CSS: &str = include_str!("../default.css");
+const REDIRECT_LIMIT: usize = 5;
+
+// Percent-encode user input for use as a Gemini query. Encoding is done
+// byte-wise so that multi-byte UTF-8 sequences are encoded correctly.
+fn percent_encode_query(input: &str) -> String {
+  let mut encoded = String::with_capacity(input.len());
+
+  for byte in input.bytes() {
+    match byte {
+      b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' =>
+        encoded.push(char::from(byte)),
+      _ => {
+        let _ = write!(&mut encoded, "%{byte:02X}");
+      }
+    }
+  }
+
+  encoded
+}
 
 #[derive(serde::Deserialize)]
 pub struct InputSubmission {
@@ -58,7 +77,6 @@ pub async fn default(
         String::new()
       }
     }),
-    false,
     &mut configuration,
   ) {
     Ok(url) => url,
@@ -80,13 +98,9 @@ pub async fn default(
   }
 
   if let Some(input) = submitted_input {
-    let input = input
-      .replace("\r\n", "\n")
-      .replace('\r', "\n")
-      .replace('\t', "%09")
-      .replace('\n', "%0A");
+    let input = input.replace("\r\n", "\n").replace('\r', "\n");
 
-    url.set_query(Some(&input));
+    url.set_query(Some(&percent_encode_query(&input)));
   }
 
   let mut timer = Instant::now();
@@ -96,28 +110,27 @@ pub async fn default(
       return Ok(HttpResponse::Ok().body(e.to_string()));
     }
   };
-  let initial_status = *response.status();
-  let (redirect_response_status, redirect_url) = if initial_status
-    == germ::request::Status::PermanentRedirect
-    || initial_status == germ::request::Status::TemporaryRedirect
-  {
-    let target = if response.meta().starts_with('/') {
-      format!(
-        "gemini://{}{}",
-        url.host_str().unwrap_or_default(),
-        response.meta()
-      )
-    } else {
-      response.meta().to_string()
-    };
-    let target = match url::Url::parse(&target) {
-      Ok(target) => target,
-      Err(e) => {
-        return Ok(
-          HttpResponse::Ok().body(format!("invalid redirect target: {e}")),
-        );
-      }
-    };
+  let mut redirect_response_status = None;
+  let mut redirect_url: Option<url::Url> = None;
+
+  for _ in 0..REDIRECT_LIMIT {
+    if *response.status() != germ::request::Status::PermanentRedirect
+      && *response.status() != germ::request::Status::TemporaryRedirect
+    {
+      break;
+    }
+
+    let target =
+      match redirect_url.as_ref().unwrap_or(&url).join(&response.meta()) {
+        Ok(target) => target,
+        Err(e) => {
+          return Ok(
+            HttpResponse::Ok().body(format!("invalid redirect target: {e}")),
+          );
+        }
+      };
+
+    redirect_response_status.get_or_insert_with(|| *response.status());
 
     response = match germ::request::request(&target).await {
       Ok(response) => response,
@@ -125,11 +138,8 @@ pub async fn default(
         return Ok(HttpResponse::Ok().body(e.to_string()));
       }
     };
-
-    (Some(initial_status), Some(target))
-  } else {
-    (None, None)
-  };
+    redirect_url = Some(target);
+  }
 
   let response_time_taken = timer.elapsed();
   let meta = germ::meta::Meta::from_string(response.meta().to_string());
@@ -139,6 +149,12 @@ pub async fn default(
     .map_or_else(|| "utf-8".to_string(), ToString::to_string);
   let language =
     meta.parameters().get("lang").map_or_else(String::new, ToString::to_string);
+  let http_status = match i32::from(*response.status()) {
+    20..=29 => actix_web::http::StatusCode::OK,
+    51 => actix_web::http::StatusCode::NOT_FOUND,
+    52 => actix_web::http::StatusCode::GONE,
+    _ => actix_web::http::StatusCode::BAD_GATEWAY,
+  };
 
   timer = Instant::now();
 
@@ -148,6 +164,24 @@ pub async fn default(
         HttpResponse::build(actix_web::http::StatusCode::OK)
           .content_type(response.meta().as_ref())
           .body(content_bytes.to_vec()),
+      );
+    }
+  }
+
+  if let Some(plain_texts) = &ENVIRONMENT.plain_text_route {
+    if plain_texts.split(',').any(|r| {
+      matches_pattern(r, http_request.path())
+        || matches_pattern(r, http_request.path().trim_end_matches('/'))
+    }) {
+      return Ok(
+        HttpResponse::build(http_status)
+          .content_type(format!("text/plain; charset={charset}"))
+          .body(
+            response
+              .content()
+              .as_ref()
+              .map_or_else(String::default, String::clone),
+          ),
       );
     }
   }
@@ -302,7 +336,7 @@ pub async fn default(
     );
 
     return Ok(
-      HttpResponse::Ok()
+      HttpResponse::build(http_status)
         .content_type(format!("{}; charset={charset}", meta.mime()))
         .body(html_context),
     );
@@ -312,7 +346,7 @@ pub async fn default(
     html_context.push_str(&gemini_html.1);
 
     return Ok(
-      HttpResponse::Ok()
+      HttpResponse::build(http_status)
         .content_type(format!("text/html; charset={charset}"))
         .body(html_context),
     );
@@ -425,19 +459,8 @@ pub async fn default(
     env!("VERGEN_GIT_SHA").get(0..5).unwrap_or("UNKNOWN"),
   );
 
-  if let Some(plain_texts) = &ENVIRONMENT.plain_text_route {
-    if plain_texts.split(',').any(|r| {
-      matches_pattern(r, http_request.path())
-        || matches_pattern(r, http_request.path().trim_end_matches('/'))
-    }) {
-      return Ok(HttpResponse::Ok().body(
-        response.content().as_ref().map_or_else(String::default, String::clone),
-      ));
-    }
-  }
-
   Ok(
-    HttpResponse::Ok()
+    HttpResponse::build(http_status)
       .content_type(format!("text/html; charset={charset}"))
       .body(html_context),
   )

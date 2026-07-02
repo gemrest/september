@@ -2,51 +2,36 @@ use url::Url;
 
 pub fn from_path(
   path: &str,
-  fallback: bool,
   configuration: &mut crate::response::configuration::Configuration,
 ) -> Result<Url, url::ParseError> {
-  Url::try_from(&*if path.starts_with("/proxy") {
+  Url::try_from(&*if let Some(remainder) =
+    route_remainder(path, "/proxy").or_else(|| route_remainder(path, "/x"))
+  {
     configuration.set_proxy(true);
 
-    format!(
-      "gemini://{}{}",
-      path.replace("/proxy/", ""),
-      if fallback { "/" } else { "" }
-    )
-  } else if path.starts_with("/x") {
-    configuration.set_proxy(true);
-
-    format!(
-      "gemini://{}{}",
-      path.replace("/x/", ""),
-      if fallback { "/" } else { "" }
-    )
-  } else if path.starts_with("/raw") {
+    format!("gemini://{remainder}")
+  } else if let Some(remainder) = route_remainder(path, "/raw") {
     configuration.set_proxy(true);
     configuration.set_raw(true);
 
-    format!(
-      "gemini://{}{}",
-      path.replace("/raw/", ""),
-      if fallback { "/" } else { "" }
-    )
-  } else if path.starts_with("/nocss") {
+    format!("gemini://{remainder}")
+  } else if let Some(remainder) = route_remainder(path, "/nocss") {
     configuration.set_proxy(true);
     configuration.set_no_css(true);
 
-    format!(
-      "gemini://{}{}",
-      path.replace("/nocss/", ""),
-      if fallback { "/" } else { "" }
-    )
+    format!("gemini://{remainder}")
   } else {
-    format!(
-      "{}{}{}",
-      &crate::environment::ENVIRONMENT.root,
-      path,
-      if fallback { "/" } else { "" }
-    )
+    format!("{}{}", &crate::environment::ENVIRONMENT.root, path)
   })
+}
+
+// A route prefix only matches a whole path segment: "/raw" and "/raw/..."
+// are the raw route, but "/rawhide" is a page on the root capsule.
+fn route_remainder<'a>(path: &'a str, prefix: &str) -> Option<&'a str> {
+  match path.strip_prefix(prefix)? {
+    "" => Some(""),
+    remainder => remainder.strip_prefix('/'),
+  }
 }
 
 pub fn matches_pattern(pattern: &str, path: &str) -> bool {

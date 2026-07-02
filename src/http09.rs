@@ -50,7 +50,7 @@ async fn handle(
 
   let path = parse_request(&request_line)?;
   let mut configuration = crate::response::configuration::Configuration::new();
-  let url = from_path(&path, false, &mut configuration)?;
+  let url = from_path(&path, &mut configuration)?;
   let mut response = germ::request::request(&url).await?;
 
   if *response.status() == germ::request::Status::PermanentRedirect
