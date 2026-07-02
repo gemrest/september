@@ -2,11 +2,7 @@ name: Check ✅
 on:
   workflow_dispatch:
   push:
-    paths:
-      - "*"
   pull_request:
-    paths:
-      - "*"
 env:
   CARGO_TERM_COLOR: always
 jobs:
@@ -15,17 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout 🛒
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Toolchain 🧰
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
-          components: rustfmt, clippy
-          override: true
-      - name: Check ✅
-        uses: actions-rs/cargo@v1
-        continue-on-error: false
-        with:
-          command: check
-          args: --verbose
+          components: clippy
+      - name: Clippy 📎
+        run: cargo clippy --all-features --verbose
