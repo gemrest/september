@@ -5,7 +5,7 @@ set allow-duplicate-recipes := true
 name := "september"
 ghcr_repo := "ghcr.io/gemrest/" + name
 gitlab_repo := "registry.gitlab.com/gemrest/" + name
-docker_hub_repo := "docker.io/gemrest/" + name
+docker_hub_repo := "docker.io/fuwn/" + name
 
 default:
   @just --list
