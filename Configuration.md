@@ -62,7 +62,7 @@ HEAD=<script>/* September */</script><style>/* September */</style>
 
 Control whether all Gemini URLs are proxied.
 
-Similar to `KEEP_GEMINI_EXACT` and `KEEP_GEMINI_DOMAIN`, but global
+Similar to `KEEP_GEMINI`, but global
 
 This configuration value defaults to `true`.
 
@@ -190,7 +190,7 @@ echo "GET /" | nc localhost 9009
 curl --http0.9 http://localhost:9009/
 ```
 
-## `CONDENSE_LINKS_AT_HEADING`
+## `CONDENSE_LINKS_AT_HEADINGS`
 
 This configuration option is similar to `CONDENSE_LINKS`, but only condenses
 links found under specific headings.

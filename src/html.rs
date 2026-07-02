@@ -77,7 +77,9 @@ pub fn from_gemini(
     .iter()
     .map(String::as_str)
     .collect::<Vec<_>>();
-  let mut in_condense_links_flag_trap = !condensible_headings.is_empty();
+  // Condensing under CONDENSE_LINKS_AT_HEADINGS only begins once one of the
+  // listed headings has been seen.
+  let mut in_condense_links_flag_trap = false;
 
   for node in ast {
     if condensible_headings.contains(&node.to_gemtext().as_str()) {

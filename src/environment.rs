@@ -35,7 +35,7 @@ impl Environment {
       primary_colour:             std::env::var("PRIMARY_COLOUR").ok(),
       favicon_external:           std::env::var("FAVICON_EXTERNAL").ok(),
       mathjax:                    std::env::var("MATHJAX")
-        .map_or(true, |v| v.to_lowercase() == "true"),
+        .is_ok_and(|v| v.to_lowercase() == "true"),
       head:                       std::env::var("HEAD").ok(),
       header:                     std::env::var("HEADER").ok(),
       plain_text_route:           std::env::var("PLAIN_TEXT_ROUTE").ok(),

@@ -47,7 +47,11 @@ async fn handle(
   let mut reader = BufReader::new(reader);
   let mut request_line = String::new();
 
-  reader.read_line(&mut request_line).await?;
+  tokio::time::timeout(
+    std::time::Duration::from_secs(10),
+    reader.read_line(&mut request_line),
+  )
+  .await??;
 
   let path = parse_request(&request_line)?;
   let mut configuration =
