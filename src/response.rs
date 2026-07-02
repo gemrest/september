@@ -352,8 +352,16 @@ pub async fn default(
     );
   };
   let convert_time_taken = timer.elapsed();
-  let mut html_context =
-    document_head(&language, &gemini_title, !configuration.no_css);
+
+  if configuration.no_css {
+    return Ok(
+      HttpResponse::build(http_status)
+        .content_type(format!("text/html; charset={charset}"))
+        .body(gemini_body),
+    );
+  }
+
+  let mut html_context = document_head(&language, &gemini_title, true);
 
   html_context.push_str(&body_preamble(
     http_request.path(),
