@@ -96,33 +96,40 @@ pub async fn default(
       return Ok(HttpResponse::Ok().body(e.to_string()));
     }
   };
-  let mut redirect_response_status = None;
-  let mut redirect_url = None;
-
-  if *response.status() == germ::request::Status::PermanentRedirect
-    || *response.status() == germ::request::Status::TemporaryRedirect
+  let initial_status = *response.status();
+  let (redirect_response_status, redirect_url) = if initial_status
+    == germ::request::Status::PermanentRedirect
+    || initial_status == germ::request::Status::TemporaryRedirect
   {
-    redirect_response_status = Some(*response.status());
-    redirect_url = Some(
-      url::Url::parse(&if response.meta().starts_with('/') {
-        format!(
-          "gemini://{}{}",
-          url.domain().unwrap_or_default(),
-          response.meta()
-        )
-      } else {
-        response.meta().to_string()
-      })
-      .unwrap(),
-    );
-    response =
-      match germ::request::request(&redirect_url.clone().unwrap()).await {
-        Ok(response) => response,
-        Err(e) => {
-          return Ok(HttpResponse::Ok().body(e.to_string()));
-        }
+    let target = if response.meta().starts_with('/') {
+      format!(
+        "gemini://{}{}",
+        url.host_str().unwrap_or_default(),
+        response.meta()
+      )
+    } else {
+      response.meta().to_string()
+    };
+    let target = match url::Url::parse(&target) {
+      Ok(target) => target,
+      Err(e) => {
+        return Ok(
+          HttpResponse::Ok().body(format!("invalid redirect target: {e}")),
+        );
       }
-  }
+    };
+
+    response = match germ::request::request(&target).await {
+      Ok(response) => response,
+      Err(e) => {
+        return Ok(HttpResponse::Ok().body(e.to_string()));
+      }
+    };
+
+    (Some(initial_status), Some(target))
+  } else {
+    (None, None)
+  };
 
   let response_time_taken = timer.elapsed();
   let meta = germ::meta::Meta::from_string(response.meta().to_string());
@@ -279,8 +286,13 @@ pub async fn default(
       }
     )
   };
-  let gemini_html =
-    crate::html::from_gemini(&response, &url, &configuration).unwrap();
+  let Some(gemini_html) =
+    crate::html::from_gemini(&response, &url, &configuration)
+  else {
+    return Ok(
+      HttpResponse::Ok().body("could not convert Gemini content to HTML"),
+    );
+  };
   let gemini_title = gemini_html.0;
   let convert_time_taken = timer.elapsed();
 

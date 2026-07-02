@@ -33,7 +33,7 @@ fn link_from_host_href(url: &Url, href: &str) -> Option<String> {
   } else {
     Some(format!(
       "gemini://{}{}{}",
-      url.domain()?,
+      url.host_str()?,
       { if href.starts_with('/') { "" } else { "/" } },
       href
     ))
@@ -151,7 +151,7 @@ pub fn from_gemini(
         } else if !href.starts_with("gemini://") && !href.starts_with('/') {
           href = format!(
             "{}/{}",
-            url.domain().unwrap(),
+            url.host_str()?,
             if url.path().ends_with('/') {
               format!("{}{}", url.path(), href)
             } else {
@@ -174,10 +174,9 @@ pub fn from_gemini(
               .trim_start_matches("gemini://")
               .trim_end_matches('/')
               .split('/')
-              .collect::<Vec<_>>()
-              .first()
-              .unwrap()
-              != &url.host().unwrap().to_string().as_str()
+              .next()
+              .unwrap_or_default()
+              != url.host_str().unwrap_or_default()
           {
             href = format!(
               "/{}/{}",
@@ -185,15 +184,9 @@ pub fn from_gemini(
               href.trim_start_matches("gemini://")
             );
           } else {
-            href = href.trim_start_matches("gemini://").replacen(
-              &if let Some(host) = url.host() {
-                host.to_string()
-              } else {
-                return None;
-              },
-              "",
-              1,
-            );
+            href = href
+              .trim_start_matches("gemini://")
+              .replacen(url.host_str()?, "", 1);
           }
         }
 

@@ -59,7 +59,7 @@ async fn handle(
     let redirect = if response.meta().starts_with('/') {
       format!(
         "gemini://{}{}",
-        url.domain().unwrap_or_default(),
+        url.host_str().unwrap_or_default(),
         response.meta()
       )
     } else {
