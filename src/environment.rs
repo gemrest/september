@@ -35,8 +35,7 @@ impl Environment {
       primary_colour:             std::env::var("PRIMARY_COLOUR").ok(),
       favicon_external:           std::env::var("FAVICON_EXTERNAL").ok(),
       mathjax:                    std::env::var("MATHJAX")
-        .map(|v| v.to_lowercase() == "true")
-        .unwrap_or(true),
+        .map_or(true, |v| v.to_lowercase() == "true"),
       head:                       std::env::var("HEAD").ok(),
       header:                     std::env::var("HEADER").ok(),
       plain_text_route:           std::env::var("PLAIN_TEXT_ROUTE").ok(),
@@ -47,15 +46,13 @@ impl Environment {
         .map(|s| s.split(',').map(String::from).collect())
         .unwrap_or_default(),
       proxy_by_default:           std::env::var("PROXY_BY_DEFAULT")
-        .map(|v| v.to_lowercase() == "true")
-        .unwrap_or(true),
+        .map_or(true, |v| v.to_lowercase() == "true"),
       keep_gemini:                std::env::var("KEEP_GEMINI")
         .ok()
         .map(|s| s.split(',').map(String::from).collect()),
       embed_images:               std::env::var("EMBED_IMAGES").ok(),
       http09:                     std::env::var("HTTP09")
-        .map(|v| v.to_lowercase() == "true")
-        .unwrap_or(false),
+        .is_ok_and(|v| v.to_lowercase() == "true"),
       http09_port:                std::env::var("HTTP09_PORT")
         .ok()
         .and_then(|p| p.parse().ok())
