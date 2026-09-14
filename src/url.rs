@@ -21,7 +21,7 @@ pub fn from_path(
 
     format!("gemini://{remainder}")
   } else {
-    format!("{}{}", &crate::environment::ENVIRONMENT.root, path)
+    format!("{}{}", crate::environment::ENVIRONMENT.root, path)
   })
 }
 

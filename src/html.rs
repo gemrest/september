@@ -182,9 +182,11 @@ pub fn from_gemini(
               href.trim_start_matches("gemini://")
             );
           } else {
-            href = href
-              .trim_start_matches("gemini://")
-              .replacen(url.host_str()?, "", 1);
+            href = href.trim_start_matches("gemini://").replacen(
+              url.host_str()?,
+              "",
+              1,
+            );
           }
         }
 
@@ -212,8 +214,7 @@ pub fn from_gemini(
         if let Some(embed_images) = &ENVIRONMENT.embed_images {
           let href_path = href.split(['?', '#']).next().unwrap_or(&href);
 
-          if let Some(extension) = std::path::Path::new(href_path).extension()
-          {
+          if let Some(extension) = std::path::Path::new(href_path).extension() {
             if extension == "png"
               || extension == "jpg"
               || extension == "jpeg"
