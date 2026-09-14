@@ -13,6 +13,7 @@ mod environment;
 mod html;
 mod http09;
 mod response;
+mod robots;
 mod url;
 
 use {actix_web::web, log::warn, response::default, std::env::var};

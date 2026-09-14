@@ -12,6 +12,9 @@ A production deployment of September can be found at <https://fuwn.me>, with the
 
 You can try proxying any external capsule through the `/proxy/` route: <https://fuwn.me/proxy/geminiprotocol.net/>.
 
+September respects `webproxy` and wildcard exclusions in destination capsules'
+[`robots.txt` policies](gemini://geminiprotocol.net/docs/companion/robots.gmi).
+
 ### Docker
 
 `docker run` allows you to pass environment variables via the `-e` flag.

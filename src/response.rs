@@ -194,6 +194,14 @@ pub async fn default(
     url.set_query(Some(&percent_encode_query(&input)));
   }
 
+  if !crate::robots::is_allowed(&url).await {
+    return Ok(
+      HttpResponse::Forbidden()
+        .content_type("text/plain; charset=utf-8")
+        .body("The destination capsule prohibits access through web proxies."),
+    );
+  }
+
   let mut timer = Instant::now();
   let mut response = match germ::request::request(&url).await {
     Ok(response) => response,
@@ -222,6 +230,16 @@ pub async fn default(
       };
 
     redirect_response_status.get_or_insert_with(|| *response.status());
+
+    if !crate::robots::is_allowed(&target).await {
+      return Ok(
+        HttpResponse::Forbidden()
+          .content_type("text/plain; charset=utf-8")
+          .body(
+            "The destination capsule prohibits access through web proxies.",
+          ),
+      );
+    }
 
     response = match germ::request::request(&target).await {
       Ok(response) => response,
