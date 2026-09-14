@@ -16,7 +16,7 @@ fetch:
 fmt:
   cargo +nightly fmt
 
-# Build once, then push both `latest` and the latest git tag to all registries.
+# Build both architectures, then publish `latest` and the latest git tag.
 publish-images:
   #!/usr/bin/env bash
 
@@ -25,16 +25,14 @@ publish-images:
   git_tag="$(git describe --tags --abbrev=0)"
   docker_tag="${git_tag#v}"
 
-  docker build --platform linux/amd64 -f Dockerfile -t {{name}}:build .
-
-  for registry in {{ghcr_repo}} {{gitlab_repo}} {{docker_hub_repo}}; do
-    docker tag {{name}}:build "$registry:latest"
-    docker tag {{name}}:build "$registry:$docker_tag"
-  done
-
-  docker push "{{ghcr_repo}}:latest"
-  docker push "{{ghcr_repo}}:$docker_tag"
-  docker push "{{gitlab_repo}}:latest"
-  docker push "{{gitlab_repo}}:$docker_tag"
-  docker push "{{docker_hub_repo}}:latest"
-  docker push "{{docker_hub_repo}}:$docker_tag"
+  docker buildx build \
+    --platform linux/amd64,linux/arm64 \
+    --file Dockerfile \
+    --tag "{{ghcr_repo}}:latest" \
+    --tag "{{ghcr_repo}}:${docker_tag}" \
+    --tag "{{gitlab_repo}}:latest" \
+    --tag "{{gitlab_repo}}:${docker_tag}" \
+    --tag "{{docker_hub_repo}}:latest" \
+    --tag "{{docker_hub_repo}}:${docker_tag}" \
+    --push \
+    .
