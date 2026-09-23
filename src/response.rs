@@ -37,7 +37,7 @@ fn document_head(language: &str, title: &str, include_css: bool) -> String {
     if language.is_empty() {
       String::new()
     } else {
-      format!(" lang=\"{language}\"")
+      format!(" lang=\"{}\"", html_escape(language))
     }
   );
 
@@ -422,4 +422,31 @@ pub async fn default(
       .content_type(format!("text/html; charset={charset}"))
       .body(html_context),
   )
+}
+
+#[cfg(test)]
+mod tests {
+  use super::document_head;
+
+  #[test]
+  fn escapes_gemini_language_in_html_attribute() {
+    let meta =
+      germ::meta::Meta::from_string("text/gemini; lang=en\" onload=\"alert(1)");
+    let language = meta.parameters().get("lang").unwrap();
+    let head = document_head(language, "Title", false);
+
+    assert!(head.starts_with(
+      "<!DOCTYPE html><html lang=\"en&quot; onload=&quot;alert(1)\""
+    ));
+    assert!(!head.contains(" onload=\""));
+    assert!(
+      document_head("en&quot; onload=alert(1)", "Title", false).starts_with(
+        "<!DOCTYPE html><html lang=\"en&amp;quot; onload=alert(1)\""
+      )
+    );
+    assert!(
+      document_head("en-GB", "Title", false)
+        .starts_with("<!DOCTYPE html><html lang=\"en-GB\"")
+    );
+  }
 }
