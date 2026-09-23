@@ -1,4 +1,5 @@
 use {
+  crate::gemini,
   germ::request::Status,
   std::{
     collections::HashMap,
@@ -85,7 +86,7 @@ async fn fetch_policy(url: &Url) -> Option<Vec<String>> {
   robots_url.set_fragment(None);
 
   for _ in 0..=REDIRECT_LIMIT {
-    let response = germ::request::request(&robots_url).await.ok()?;
+    let response = gemini::request(&robots_url).await.ok()?;
 
     if matches!(
       response.status(),

@@ -4,6 +4,8 @@
 
 September is a simple and efficient Gemini-to-HTTP proxy written in [Rust](https://www.rust-lang.org/).
 
+Gemini requests have a 30-second deadline and a 32 MiB response limit. September accepts self-signed capsule certificates and remembers up to 4,096 host and port pairs while running. A certificate change is rejected until the previous certificate expires. The remembered certificates reset when September restarts.
+
 September remains simple, but packs more features than you could imagine, all configurable via environment variables.
 
 ## Usage

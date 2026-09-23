@@ -630,15 +630,16 @@ dependencies = [
 
 [[package]]
 name = "germ"
-version = "0.4.8"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0000b9d25b2deda200eaaa8f8fdf2fac3b86930702d45762f0a8263d7c773849"
+checksum = "6dc1427e8c2655cce3459dc8247d42bdd148824c7b2f6a39c58c1bdbfa2b9713"
 dependencies = [
  "anyhow",
  "rustls",
  "tokio",
  "tokio-rustls",
  "url",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -1185,6 +1186,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustls-pki-types"
+version = "1.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f4925028c7eb5d1fcdaf196971378ed9d2c1c4efc7dc5d011256f76c99c0a96"
+
+[[package]]
 name = "rustls-webpki"
 version = "0.101.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1233,6 +1240,7 @@ name = "september"
 version = "0.5.0"
 dependencies = [
  "actix-web",
+ "anyhow",
  "comrak",
  "dotenv",
  "germ",
@@ -1688,6 +1696,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f01b580c9ac74c8d8f0c0e4afb04eeef2acf145458e52c03845ee9cd23e3d12"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "webpki-roots"
+version = "1.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7dcd9d09a39985f5344844e66b0c530a33843579125f23e21e9f0f220850f22a"
+dependencies = [
+ "rustls-pki-types",
 ]
 
 [[package]]

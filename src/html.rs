@@ -71,15 +71,13 @@ fn render_text(text: &str) -> String {
 
 #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
 pub fn from_gemini(
-  response: &germ::request::Response,
+  content: &str,
   url: &Url,
   configuration: &crate::response::configuration::Configuration,
 ) -> Option<(String, String)> {
   const GEMINI_FRAGMENT: &str =
     r#"<span class="gemini-fragment">=&#62; </span>"#;
-  let ast_tree = germ::ast::Ast::from_string(
-    response.content().as_ref().map_or_else(String::default, String::clone),
-  );
+  let ast_tree = germ::ast::Ast::from_string(content);
   let ast = ast_tree.inner();
   let mut html = String::new();
   let mut title = String::new();

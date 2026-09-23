@@ -10,6 +10,7 @@
 #![allow(clippy::cast_precision_loss)]
 
 mod environment;
+mod gemini;
 mod html;
 mod http09;
 mod response;

@@ -1,11 +1,15 @@
 use {
-  crate::{environment::ENVIRONMENT, robots, url::from_path},
+  crate::{environment::ENVIRONMENT, gemini, robots, url::from_path},
   log::{error, info, warn},
   tokio::{
-    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     net::TcpListener,
   },
 };
+
+const MAXIMUM_REQUEST_LINE_BYTES: usize = 1024;
+const MAXIMUM_PROXY_DURATION: std::time::Duration =
+  std::time::Duration::from_secs(90);
 
 pub async fn serve() {
   let address = format!("0.0.0.0:{}", ENVIRONMENT.http09_port);
@@ -33,8 +37,10 @@ pub async fn serve() {
     };
 
     tokio::spawn(async move {
-      if let Err(error) = handle(stream).await {
-        warn!("HTTP/0.9 error from {peer}: {error}");
+      match tokio::time::timeout(MAXIMUM_PROXY_DURATION, handle(stream)).await {
+        Ok(Ok(())) => {}
+        Ok(Err(error)) => warn!("HTTP/0.9 error from {peer}: {error}"),
+        Err(_) => warn!("HTTP/0.9 request from {peer} timed out"),
       }
     });
   }
@@ -44,7 +50,8 @@ async fn handle(
   stream: tokio::net::TcpStream,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
   let (reader, mut writer) = stream.into_split();
-  let mut reader = BufReader::new(reader);
+  let mut reader =
+    BufReader::new(reader).take(MAXIMUM_REQUEST_LINE_BYTES as u64 + 1);
   let mut request_line = String::new();
 
   tokio::time::timeout(
@@ -53,6 +60,18 @@ async fn handle(
   )
   .await??;
 
+  if request_line.len() > MAXIMUM_REQUEST_LINE_BYTES
+    || !request_line.ends_with('\n')
+  {
+    return Err(
+      std::io::Error::new(
+        std::io::ErrorKind::InvalidData,
+        "HTTP/0.9 request line exceeds the size limit or has no terminator",
+      )
+      .into(),
+    );
+  }
+
   let path = parse_request(&request_line)?;
   let mut configuration =
     crate::response::configuration::Configuration::default();
@@ -60,7 +79,7 @@ async fn handle(
 
   ensure_allowed(&url).await?;
 
-  let mut response = germ::request::request(&url).await?;
+  let mut response = gemini::request(&url).await?;
 
   if *response.status() == germ::request::Status::PermanentRedirect
     || *response.status() == germ::request::Status::TemporaryRedirect
@@ -69,7 +88,7 @@ async fn handle(
 
     ensure_allowed(&redirect).await?;
 
-    response = germ::request::request(&redirect).await?;
+    response = gemini::request(&redirect).await?;
   }
 
   if response.meta().starts_with("image/") {

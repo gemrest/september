@@ -3,6 +3,7 @@ pub mod configuration;
 use {
   crate::{
     environment::ENVIRONMENT,
+    gemini,
     html::html_escape,
     robots::{self, Access},
     url::{from_path as url_from_path, matches_pattern},
@@ -16,6 +17,8 @@ use {
 
 const CSS: &str = include_str!("../default.css");
 const REDIRECT_LIMIT: usize = 5;
+const MAXIMUM_PROXY_DURATION: std::time::Duration =
+  std::time::Duration::from_secs(90);
 
 // Remote documents must not run scripts or inherit this site's origin.
 fn sandboxed_upstream_response(status: StatusCode) -> HttpResponseBuilder {
@@ -164,8 +167,27 @@ pub struct InputSubmission {
   target: Option<String>,
 }
 
-#[allow(clippy::future_not_send, clippy::too_many_lines)]
+#[allow(clippy::future_not_send)]
 pub async fn default(
+  http_request: actix_web::HttpRequest,
+  input_submission: Option<actix_web::web::Form<InputSubmission>>,
+) -> Result<HttpResponse, Error> {
+  tokio::time::timeout(
+    MAXIMUM_PROXY_DURATION,
+    default_inner(http_request, input_submission),
+  )
+  .await
+  .unwrap_or_else(|_| {
+    Ok(
+      HttpResponse::GatewayTimeout()
+        .content_type("text/plain; charset=utf-8")
+        .body("The Gemini request timed out."),
+    )
+  })
+}
+
+#[allow(clippy::future_not_send, clippy::too_many_lines)]
+async fn default_inner(
   http_request: actix_web::HttpRequest,
   input_submission: Option<actix_web::web::Form<InputSubmission>>,
 ) -> Result<HttpResponse, Error> {
@@ -235,7 +257,7 @@ pub async fn default(
   }
 
   let mut timer = Instant::now();
-  let mut response = match germ::request::request(&url).await {
+  let mut response = match gemini::request(&url).await {
     Ok(response) => response,
     Err(error) => return Ok(upstream_error(error)),
   };
@@ -264,7 +286,7 @@ pub async fn default(
       return Ok(rejection);
     }
 
-    response = match germ::request::request(&target).await {
+    response = match gemini::request(&target).await {
       Ok(response) => response,
       Err(error) => return Ok(upstream_error(error)),
     };
@@ -383,9 +405,10 @@ pub async fn default(
     );
   }
 
+  let content = response.content().unwrap_or_default();
   let rendered_url = redirect_url.as_ref().unwrap_or(&url);
   let Some((gemini_title, gemini_body)) =
-    crate::html::from_gemini(&response, rendered_url, &configuration)
+    crate::html::from_gemini(&content, rendered_url, &configuration)
   else {
     return Ok(upstream_error("could not convert Gemini content to HTML"));
   };
