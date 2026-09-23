@@ -36,7 +36,7 @@ docker run -d \
   -e ROOT="gemini://fuwn.me" \
   -e PORT="8080" \
   -e CSS_EXTERNAL="https://example.com/style.css" \
-  -p 80:80 \
+  -p 80:8080 \
   fuwn/september:latest
 ```
 
