@@ -142,7 +142,7 @@ A comma-separated list of paths will condense adjacent links to a single line on
 <p><a href="/">Link</a> | <a href="/">Link</a> | <a href="/">Link</a></p>
 ```
 
-## `PRIMARY_COLOUR`
+## `PRIMARY_COLOR`
 
 Set the primary colour of elements in the default stylesheet. This field
 controls the colour of items such as links and highlights.
@@ -150,12 +150,15 @@ controls the colour of items such as links and highlights.
 Popular choices are `var(--base0D)` for a blue, or `var(--base09)` for an
 amber colour.
 
+The previous spelling, `PRIMARY_COLOUR`, is still accepted when `PRIMARY_COLOR`
+is unset. If both are set, `PRIMARY_COLOR` takes precedence.
+
 ### Examples
 
 ```plaintext
-PRIMARY_COLOUR=var(--base09)
-PRIMARY_COLOUR=red
-PRIMARY_COLOUR=#ff0000
+PRIMARY_COLOR=var(--base09)
+PRIMARY_COLOR=red
+PRIMARY_COLOR=#ff0000
 ```
 
 ## `HTTP09`

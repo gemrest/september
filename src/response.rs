@@ -57,7 +57,7 @@ fn document_head(language: &str, title: &str, include_css: bool) -> String {
       let _ = write!(
         &mut head,
         "<style>:root {{ --primary: {} }}</style>",
-        ENVIRONMENT.primary_colour.as_deref().unwrap_or("var(--base0D)")
+        ENVIRONMENT.primary_color.as_deref().unwrap_or("var(--base0D)")
       );
     }
 

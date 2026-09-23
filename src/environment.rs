@@ -6,7 +6,7 @@ pub static ENVIRONMENT: LazyLock<Environment> =
 pub struct Environment {
   pub root:                       String,
   pub css_external:               Option<String>,
-  pub primary_colour:             Option<String>,
+  pub primary_color:              Option<String>,
   pub favicon_external:           Option<String>,
   pub mathjax:                    bool,
   pub head:                       Option<String>,
@@ -32,7 +32,9 @@ impl Environment {
         "gemini://fuwn.me".to_string()
       }),
       css_external:               std::env::var("CSS_EXTERNAL").ok(),
-      primary_colour:             std::env::var("PRIMARY_COLOUR").ok(),
+      primary_color:              std::env::var("PRIMARY_COLOR")
+        .or_else(|_| std::env::var("PRIMARY_COLOUR"))
+        .ok(),
       favicon_external:           std::env::var("FAVICON_EXTERNAL").ok(),
       mathjax:                    std::env::var("MATHJAX")
         .is_ok_and(|v| v.to_lowercase() == "true"),
