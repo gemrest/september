@@ -10,6 +10,7 @@ use {
 
 const CACHE_LIFETIME: Duration = Duration::from_secs(60 * 60);
 const MAXIMUM_POLICY_LENGTH: usize = 512 * 1024;
+const REDIRECT_LIMIT: usize = 5;
 const VIRTUAL_USER_AGENT: &str = "webproxy";
 
 static POLICIES: LazyLock<Mutex<HashMap<String, CachedPolicy>>> =
@@ -21,18 +22,30 @@ struct CachedPolicy {
   fetched_at:       Instant,
 }
 
-pub async fn is_allowed(url: &Url) -> bool {
+pub enum Access {
+  Allowed,
+  Denied,
+  Unavailable,
+}
+
+pub async fn check_access(url: &Url) -> Access {
   if url.path() == "/robots.txt" {
-    return true;
+    return Access::Allowed;
   }
 
   let origin = origin(url);
 
   if let Some(policy) = cached_policy(&origin) {
-    return policy.allows(url.path());
+    return if policy.allows(url.path()) {
+      Access::Allowed
+    } else {
+      Access::Denied
+    };
   }
 
-  let policy = fetch_policy(url).await;
+  let Some(policy) = fetch_policy(url).await else {
+    return Access::Unavailable;
+  };
 
   let mut policies =
     POLICIES.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
@@ -45,7 +58,11 @@ pub async fn is_allowed(url: &Url) -> bool {
 
   drop(policies);
 
-  !policy.iter().any(|prefix| url.path().starts_with(prefix))
+  if policy.iter().any(|prefix| url.path().starts_with(prefix)) {
+    Access::Denied
+  } else {
+    Access::Allowed
+  }
 }
 
 fn cached_policy(origin: &str) -> Option<CachedPolicy> {
@@ -60,30 +77,61 @@ fn cached_policy(origin: &str) -> Option<CachedPolicy> {
 
 fn origin(url: &Url) -> String { url[..url::Position::BeforePath].to_string() }
 
-async fn fetch_policy(url: &Url) -> Vec<String> {
+async fn fetch_policy(url: &Url) -> Option<Vec<String>> {
   let mut robots_url = url.clone();
 
   robots_url.set_path("/robots.txt");
   robots_url.set_query(None);
   robots_url.set_fragment(None);
 
-  let Ok(response) = germ::request::request(&robots_url).await else {
-    return Vec::new();
-  };
+  for _ in 0..=REDIRECT_LIMIT {
+    let response = germ::request::request(&robots_url).await.ok()?;
 
-  if *response.status() != Status::Success
-    || !response.meta().starts_with("text/plain")
-  {
-    return Vec::new();
+    if matches!(
+      response.status(),
+      Status::PermanentRedirect | Status::TemporaryRedirect
+    ) {
+      robots_url = robots_url.join(&response.meta()).ok()?;
+
+      continue;
+    }
+
+    let content = response.content();
+
+    return policy_from_response(
+      *response.status(),
+      &response.meta(),
+      content.as_deref(),
+    );
   }
 
-  response.content().as_ref().map_or_else(Vec::new, |content| {
-    if content.len() > MAXIMUM_POLICY_LENGTH {
-      Vec::new()
-    } else {
-      disallowed_paths(content, VIRTUAL_USER_AGENT)
-    }
-  })
+  None
+}
+
+fn policy_from_response(
+  status: Status,
+  meta: &str,
+  content: Option<&str>,
+) -> Option<Vec<String>> {
+  if status == Status::NotFound || status == Status::Gone {
+    return Some(Vec::new());
+  }
+
+  if status != Status::Success
+    || !meta
+      .split(';')
+      .next()
+      .unwrap_or("")
+      .trim()
+      .eq_ignore_ascii_case("text/plain")
+  {
+    return None;
+  }
+
+  let content = content.unwrap_or("");
+
+  (content.len() <= MAXIMUM_POLICY_LENGTH)
+    .then(|| disallowed_paths(content, VIRTUAL_USER_AGENT))
 }
 
 fn disallowed_paths(policy: &str, user_agent: &str) -> Vec<String> {
@@ -140,9 +188,41 @@ impl CachedPolicy {
 #[cfg(test)]
 mod tests {
   use {
-    super::{disallowed_paths, origin},
+    super::{disallowed_paths, origin, policy_from_response},
+    germ::request::Status,
     url::Url,
   };
+
+  #[test]
+  fn distinguishes_missing_policy_from_unavailable_policy() {
+    assert_eq!(policy_from_response(Status::NotFound, "", None), Some(vec![]));
+    assert_eq!(policy_from_response(Status::Gone, "", None), Some(vec![]));
+    assert_eq!(policy_from_response(Status::TemporaryFailure, "", None), None);
+    assert_eq!(
+      policy_from_response(Status::Success, "text/gemini", None),
+      None
+    );
+    assert_eq!(
+      policy_from_response(Status::Success, "text/plain", None),
+      Some(vec![])
+    );
+    assert_eq!(
+      policy_from_response(
+        Status::Success,
+        "text/plain",
+        Some(&"x".repeat(super::MAXIMUM_POLICY_LENGTH + 1))
+      ),
+      None
+    );
+    assert_eq!(
+      policy_from_response(
+        Status::Success,
+        "TEXT/PLAIN; charset=utf-8",
+        Some("User-agent: webproxy\nDisallow: /private\n")
+      ),
+      Some(vec!["/private".to_string()])
+    );
+  }
 
   #[test]
   fn separates_capsule_origins() {

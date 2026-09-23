@@ -14,6 +14,9 @@ You can try proxying any external capsule through the `/proxy/` route: <https://
 
 September respects `webproxy` and wildcard exclusions in destination capsules'
 [`robots.txt` policies](gemini://geminiprotocol.net/docs/companion/robots.gmi).
+If a policy cannot be checked, September temporarily declines proxy requests
+until the check succeeds. A capsule that reports its policy as not found has no
+proxy exclusions.
 
 ### Docker
 

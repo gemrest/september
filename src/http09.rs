@@ -86,13 +86,15 @@ async fn handle(
 }
 
 async fn ensure_allowed(url: &url::Url) -> std::io::Result<()> {
-  if robots::is_allowed(url).await {
-    Ok(())
-  } else {
-    Err(std::io::Error::new(
+  match robots::check_access(url).await {
+    robots::Access::Allowed => Ok(()),
+    robots::Access::Denied => Err(std::io::Error::new(
       std::io::ErrorKind::PermissionDenied,
       "The destination capsule prohibits access through web proxies.",
-    ))
+    )),
+    robots::Access::Unavailable => Err(std::io::Error::other(
+      "The destination capsule's robots.txt could not be checked.",
+    )),
   }
 }
 

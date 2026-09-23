@@ -4,6 +4,7 @@ use {
   crate::{
     environment::ENVIRONMENT,
     html::html_escape,
+    robots::{self, Access},
     url::{from_path as url_from_path, matches_pattern},
   },
   actix_web::{
@@ -24,6 +25,22 @@ fn sandboxed_upstream_response(status: StatusCode) -> HttpResponseBuilder {
   response.insert_header((header::X_CONTENT_TYPE_OPTIONS, "nosniff"));
 
   response
+}
+
+async fn robots_rejection(url: &url::Url) -> Option<HttpResponse> {
+  match robots::check_access(url).await {
+    Access::Allowed => None,
+    Access::Denied => Some(
+      HttpResponse::Forbidden()
+        .content_type("text/plain; charset=utf-8")
+        .body("The destination capsule prohibits access through web proxies."),
+    ),
+    Access::Unavailable => Some(
+      HttpResponse::ServiceUnavailable()
+        .content_type("text/plain; charset=utf-8")
+        .body("The destination capsule's robots.txt could not be checked."),
+    ),
+  }
 }
 
 // Percent-encode user input for use as a Gemini query. Encoding is done
@@ -207,12 +224,8 @@ pub async fn default(
     url.set_query(Some(&percent_encode_query(&input)));
   }
 
-  if !crate::robots::is_allowed(&url).await {
-    return Ok(
-      HttpResponse::Forbidden()
-        .content_type("text/plain; charset=utf-8")
-        .body("The destination capsule prohibits access through web proxies."),
-    );
+  if let Some(rejection) = robots_rejection(&url).await {
+    return Ok(rejection);
   }
 
   let mut timer = Instant::now();
@@ -244,14 +257,8 @@ pub async fn default(
 
     redirect_response_status.get_or_insert_with(|| *response.status());
 
-    if !crate::robots::is_allowed(&target).await {
-      return Ok(
-        HttpResponse::Forbidden()
-          .content_type("text/plain; charset=utf-8")
-          .body(
-            "The destination capsule prohibits access through web proxies.",
-          ),
-      );
+    if let Some(rejection) = robots_rejection(&target).await {
+      return Ok(rejection);
     }
 
     response = match germ::request::request(&target).await {
