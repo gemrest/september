@@ -139,13 +139,11 @@ pub fn from_gemini(
     .iter()
     .map(String::as_str)
     .collect::<Vec<_>>();
-  // Condensing under CONDENSE_LINKS_AT_HEADINGS only begins once one of the
-  // listed headings has been seen.
-  let mut in_condense_links_flag_trap = false;
+  let mut condense_links_under_heading = false;
 
   for node in ast {
     if condensible_headings.contains(&node.to_gemtext().as_str()) {
-      in_condense_links_flag_trap = true;
+      condense_links_under_heading = true;
     }
 
     if previous_link && !matches!(node, Node::Link { .. }) {
@@ -233,7 +231,7 @@ pub fn from_gemini(
         }
 
         if previous_link {
-          if condense_links || in_condense_links_flag_trap {
+          if condense_links || condense_links_under_heading {
             html = align_adjacent_links(&html, previous_link_count);
             html.push_str(r#" <span class="gemini-fragment">|</span> "#);
             previous_link_count += 1;
@@ -256,7 +254,7 @@ pub fn from_gemini(
       }
       Node::Heading { level, text } => {
         if !condensible_headings.contains(&node.to_gemtext().as_str()) {
-          in_condense_links_flag_trap = false;
+          condense_links_under_heading = false;
         }
 
         if title.is_empty() && *level == 1 {

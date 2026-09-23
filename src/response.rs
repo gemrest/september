@@ -256,7 +256,7 @@ async fn default_inner(
     return Ok(rejection);
   }
 
-  let mut timer = Instant::now();
+  let request_started_at = Instant::now();
   let mut response = match gemini::request(&url).await {
     Ok(response) => response,
     Err(error) => return Ok(upstream_error(error)),
@@ -293,7 +293,7 @@ async fn default_inner(
     redirect_url = Some(target);
   }
 
-  let response_time_taken = timer.elapsed();
+  let response_time_taken = request_started_at.elapsed();
   let meta = germ::meta::Meta::from_string(response.meta().to_string());
   let charset = meta
     .parameters()
@@ -308,7 +308,7 @@ async fn default_inner(
     _ => actix_web::http::StatusCode::BAD_GATEWAY,
   };
 
-  timer = Instant::now();
+  let conversion_started_at = Instant::now();
 
   if response.meta().starts_with("image/") {
     if let Some(content_bytes) = &response.content_bytes() {
@@ -349,13 +349,13 @@ async fn default_inner(
       );
     }
 
-    let mut html_context = document_head(
+    let mut document = document_head(
       &language,
       &html_escape(&response.meta()),
       !configuration.no_css,
     );
 
-    html_context.push_str(&body_preamble(
+    document.push_str(&body_preamble(
       http_request.path(),
       redirect_response_status,
       redirect_url.as_ref(),
@@ -369,7 +369,7 @@ async fn default_inner(
         "<textarea name=\"input\" rows=\"8\" autofocus></textarea>"
       };
     let _ = write!(
-      &mut html_context,
+      &mut document,
       "<p>{}</p><form method=\"post\" action=\"{}\"><input type=\"hidden\" \
        name=\"target\" value=\"{}\">{}<button \
        type=\"submit\">Submit</button></form></body></html>",
@@ -388,7 +388,7 @@ async fn default_inner(
     return Ok(
       response_builder
         .content_type(format!("text/html; charset={charset}"))
-        .body(html_context),
+        .body(document),
     );
   }
 
@@ -412,7 +412,7 @@ async fn default_inner(
   else {
     return Ok(upstream_error("could not convert Gemini content to HTML"));
   };
-  let convert_time_taken = timer.elapsed();
+  let convert_time_taken = conversion_started_at.elapsed();
 
   if configuration.no_css {
     return Ok(
@@ -422,23 +422,22 @@ async fn default_inner(
     );
   }
 
-  let mut html_context = document_head(&language, &gemini_title, true);
+  let mut document = document_head(&language, &gemini_title, true);
 
-  html_context.push_str(&body_preamble(
+  document.push_str(&body_preamble(
     http_request.path(),
     redirect_response_status,
     redirect_url.as_ref(),
   ));
 
   if *response.status() == germ::request::Status::Success {
-    html_context.push_str(&gemini_body);
+    document.push_str(&gemini_body);
   } else {
-    let _ =
-      write!(&mut html_context, "<p>{}</p>", html_escape(&response.meta()));
+    let _ = write!(&mut document, "<p>{}</p>", html_escape(&response.meta()));
   }
 
   let _ = write!(
-    &mut html_context,
+    &mut document,
     "<details>\n<summary>Proxy Information</summary>
 <dl>
 <dt>Original URL</dt><dd><a href=\"{}\">{0}</a></dd>
@@ -463,7 +462,7 @@ async fn default_inner(
   Ok(
     HttpResponse::build(http_status)
       .content_type(format!("text/html; charset={charset}"))
-      .body(html_context),
+      .body(document),
   )
 }
 
