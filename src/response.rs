@@ -43,6 +43,12 @@ async fn robots_rejection(url: &url::Url) -> Option<HttpResponse> {
   }
 }
 
+fn upstream_error(message: impl std::fmt::Display) -> HttpResponse {
+  HttpResponse::BadGateway()
+    .content_type("text/plain; charset=utf-8")
+    .body(message.to_string())
+}
+
 // Percent-encode user input for use as a Gemini query. Encoding is done
 // byte-wise so that multi-byte UTF-8 sequences are encoded correctly.
 fn percent_encode_query(input: &str) -> String {
@@ -231,9 +237,7 @@ pub async fn default(
   let mut timer = Instant::now();
   let mut response = match germ::request::request(&url).await {
     Ok(response) => response,
-    Err(e) => {
-      return Ok(HttpResponse::Ok().body(e.to_string()));
-    }
+    Err(error) => return Ok(upstream_error(error)),
   };
   let mut redirect_response_status = None;
   let mut redirect_url: Option<url::Url> = None;
@@ -248,11 +252,10 @@ pub async fn default(
     let target =
       match redirect_url.as_ref().unwrap_or(&url).join(&response.meta()) {
         Ok(target) => target,
-        Err(e) => {
-          return Ok(
-            HttpResponse::Ok().body(format!("invalid redirect target: {e}")),
-          );
-        }
+        Err(error) =>
+          return Ok(upstream_error(format!(
+            "invalid redirect target: {error}"
+          ))),
       };
 
     redirect_response_status.get_or_insert_with(|| *response.status());
@@ -263,9 +266,7 @@ pub async fn default(
 
     response = match germ::request::request(&target).await {
       Ok(response) => response,
-      Err(e) => {
-        return Ok(HttpResponse::Ok().body(e.to_string()));
-      }
+      Err(error) => return Ok(upstream_error(error)),
     };
     redirect_url = Some(target);
   }
@@ -290,7 +291,7 @@ pub async fn default(
   if response.meta().starts_with("image/") {
     if let Some(content_bytes) = &response.content_bytes() {
       return Ok(
-        sandboxed_upstream_response(actix_web::http::StatusCode::OK)
+        sandboxed_upstream_response(http_status)
           .content_type(response.meta().as_ref())
           .body(content_bytes.to_vec()),
       );
@@ -382,12 +383,11 @@ pub async fn default(
     );
   }
 
+  let rendered_url = redirect_url.as_ref().unwrap_or(&url);
   let Some((gemini_title, gemini_body)) =
-    crate::html::from_gemini(&response, &url, &configuration)
+    crate::html::from_gemini(&response, rendered_url, &configuration)
   else {
-    return Ok(
-      HttpResponse::Ok().body("could not convert Gemini content to HTML"),
-    );
+    return Ok(upstream_error("could not convert Gemini content to HTML"));
   };
   let convert_time_taken = timer.elapsed();
 
@@ -447,7 +447,7 @@ pub async fn default(
 #[cfg(test)]
 mod tests {
   use {
-    super::{document_head, sandboxed_upstream_response},
+    super::{document_head, sandboxed_upstream_response, upstream_error},
     actix_web::http::{StatusCode, header},
   };
 
@@ -493,5 +493,16 @@ mod tests {
         content_type
       );
     }
+  }
+
+  #[test]
+  fn reports_upstream_errors_as_bad_gateway() {
+    let response = upstream_error("capsule unavailable");
+
+    assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
+    assert_eq!(
+      response.headers().get(header::CONTENT_TYPE).unwrap(),
+      "text/plain; charset=utf-8"
+    );
   }
 }
