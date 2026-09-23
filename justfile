@@ -16,13 +16,18 @@ fetch:
 fmt:
   cargo +nightly fmt
 
-# Build both architectures, then publish `latest` and the latest git tag.
+# Build both architectures, then publish `latest` and the checked-out tag.
 publish-images:
   #!/usr/bin/env bash
 
   set -euo pipefail
 
-  git_tag="$(git describe --tags --abbrev=0)"
+  if [[ -n "$(git status --porcelain --untracked-files=all)" ]]; then
+    echo "Release checkout must be clean." >&2
+    exit 1
+  fi
+
+  git_tag="$(git describe --tags --exact-match HEAD)"
   docker_tag="${git_tag#v}"
 
   docker buildx build \
