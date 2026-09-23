@@ -365,6 +365,21 @@ mod tests {
   }
 
   #[test]
+  fn escapes_numbered_html_across_gemtext_nodes() {
+    let gemtext = "1. <img src=x onerror=alert(1)>\n# 1. <img src=x \
+                   onerror=alert(1)>\n=> /next 1. <img src=x \
+                   onerror=alert(1)>\n* 1. <img src=x onerror=alert(1)>\n> 1. \
+                   <img src=x onerror=alert(1)>\n";
+    let url = Url::parse("gemini://example.org/current").unwrap();
+    let (title, html) =
+      from_gemini(gemtext, &url, &Configuration::default()).unwrap();
+
+    assert!(!title.contains("<img"));
+    assert!(!html.contains("<img"));
+    assert!(html.contains("&lt;img"));
+  }
+
+  #[test]
   fn escapes_numbered_text_without_changing_its_label() {
     assert_eq!(
       render_text("1. <script>alert(1)</script>"),
