@@ -5,6 +5,8 @@ use {
   url::Url,
 };
 
+const GEMINI_FRAGMENT: &str = r#"<span class="gemini-fragment">=&#62; </span>"#;
+
 pub fn html_escape(input: &str) -> String {
   input
     .replace('&', "&amp;")
@@ -69,14 +71,60 @@ fn render_text(text: &str) -> String {
   }
 }
 
+fn embedded_image(href: &str, label: &str, mode: &str) -> Option<String> {
+  let href_path = href.split(['?', '#']).next().unwrap_or(href);
+  let extension = std::path::Path::new(href_path).extension()?.to_str()?;
+
+  if !["png", "jpg", "jpeg", "gif", "webp", "svg"].contains(&extension) {
+    return None;
+  }
+
+  let mut html = String::new();
+
+  if mode == "1" {
+    let _ = write!(
+      &mut html,
+      "<p><a href=\"{}\">{}</a> <i>Embedded below</i></p>",
+      sanitize_href(href),
+      render_text(label).trim(),
+    );
+  }
+
+  let _ = write!(
+    &mut html,
+    "<p><img src=\"{}\" alt=\"{}\" /></p>",
+    sanitize_href(href),
+    html_escape(label),
+  );
+
+  Some(html)
+}
+
+fn align_adjacent_links(html: &str, previous_link_count: usize) -> String {
+  if previous_link_count == 0 {
+    return html.to_string();
+  }
+
+  html.rfind(GEMINI_FRAGMENT).map_or_else(
+    || html.to_string(),
+    |position| {
+      let mut result =
+        String::with_capacity(html.len() - GEMINI_FRAGMENT.len());
+
+      result.push_str(&html[..position]);
+      result.push_str(&html[position + GEMINI_FRAGMENT.len()..]);
+
+      result
+    },
+  )
+}
+
 #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
 pub fn from_gemini(
   content: &str,
   url: &Url,
   configuration: &crate::response::configuration::Configuration,
 ) -> Option<(String, String)> {
-  const GEMINI_FRAGMENT: &str =
-    r#"<span class="gemini-fragment">=&#62; </span>"#;
   let ast_tree = germ::ast::Ast::from_string(content);
   let ast = ast_tree.inner();
   let mut html = String::new();
@@ -100,46 +148,11 @@ pub fn from_gemini(
       in_condense_links_flag_trap = true;
     }
 
-    let align_adjacent_links = |html: &str| {
-      if previous_link_count > 0 {
-        html.rfind(GEMINI_FRAGMENT).map_or_else(
-          || html.to_string(),
-          |position| {
-            let mut result =
-              String::with_capacity(html.len() - GEMINI_FRAGMENT.len());
-
-            result.push_str(&html[..position]);
-            result.push_str(&html[position + GEMINI_FRAGMENT.len()..]);
-
-            result
-          },
-        )
-      } else {
-        html.to_string()
-      }
-    };
-
-    if previous_link
-      && (!matches!(node, Node::Link { .. })
-        || (!condense_links && !in_condense_links_flag_trap))
-    {
-      if matches!(node, Node::Link { .. }) {
-        html.push_str("<br />");
-      } else {
-        html.push_str("</p>");
-      }
-
+    if previous_link && !matches!(node, Node::Link { .. }) {
+      html.push_str("</p>");
       previous_link = false;
-      html = align_adjacent_links(&html);
+      html = align_adjacent_links(&html, previous_link_count);
       previous_link_count = 0;
-    } else if previous_link {
-      html = align_adjacent_links(&html);
-
-      html.push_str(r#" <span class="gemini-fragment">|</span> "#);
-
-      previous_link_count += 1;
-    } else if !previous_link && matches!(node, Node::Link { .. }) {
-      html.push_str("<p>");
     }
 
     match node {
@@ -202,36 +215,33 @@ pub fn from_gemini(
           }
         }
 
-        if let Some(embed_images) = &ENVIRONMENT.embed_images {
-          let href_path = href.split(['?', '#']).next().unwrap_or(&href);
-
-          if let Some(extension) = std::path::Path::new(href_path).extension() {
-            if extension == "png"
-              || extension == "jpg"
-              || extension == "jpeg"
-              || extension == "gif"
-              || extension == "webp"
-              || extension == "svg"
-            {
-              if embed_images == "1" {
-                let _ = writeln!(
-                  &mut html,
-                  "<p><a href=\"{}\">{}</a> <i>Embedded below</i></p>",
-                  sanitize_href(&href),
-                  render_text(text.as_ref().unwrap_or(to)),
-                );
-              }
-
-              let _ = writeln!(
-                &mut html,
-                "<p><img src=\"{}\" alt=\"{}\" /></p>",
-                sanitize_href(&href),
-                html_escape(text.as_ref().unwrap_or(to)),
-              );
-
-              continue;
-            }
+        if let Some(image) =
+          ENVIRONMENT.embed_images.as_deref().and_then(|mode| {
+            embedded_image(&href, text.as_ref().unwrap_or(to), mode)
+          })
+        {
+          if previous_link {
+            html.push_str("</p>");
+            html = align_adjacent_links(&html, previous_link_count);
+            previous_link = false;
+            previous_link_count = 0;
           }
+
+          html.push_str(&image);
+
+          continue;
+        }
+
+        if previous_link {
+          if condense_links || in_condense_links_flag_trap {
+            html = align_adjacent_links(&html, previous_link_count);
+            html.push_str(r#" <span class="gemini-fragment">|</span> "#);
+            previous_link_count += 1;
+          } else {
+            html.push_str("<br />");
+          }
+        } else {
+          html.push_str("<p>");
         }
 
         previous_link = true;
@@ -288,13 +298,22 @@ pub fn from_gemini(
     }
   }
 
+  if previous_link {
+    html.push_str("</p>");
+    html = align_adjacent_links(&html, previous_link_count);
+  }
+
   Some((title, html))
 }
 
 #[cfg(test)]
 mod tests {
   use {
-    super::{link_from_host_href, render_text, resolve_link},
+    super::{
+      embedded_image, from_gemini, link_from_host_href, render_text,
+      resolve_link,
+    },
+    crate::response::configuration::Configuration,
     url::Url,
   };
 
@@ -322,6 +341,29 @@ mod tests {
       link_from_host_href(&url, "/proxy/other.org/proxy/next").as_deref(),
       Some("gemini://other.org/proxy/next")
     );
+  }
+
+  #[test]
+  fn embeds_images_as_separate_paragraphs() {
+    assert_eq!(
+      embedded_image("gemini://example.org/a.png", "A", "1").as_deref(),
+      Some(
+        "<p><a href=\"gemini://example.org/a.png\">A</a> <i>Embedded \
+         below</i></p><p><img src=\"gemini://example.org/a.png\" alt=\"A\" \
+         /></p>"
+      )
+    );
+    assert_eq!(embedded_image("gemini://example.org/a.txt", "A", "1"), None);
+  }
+
+  #[test]
+  fn closes_a_final_link_paragraph() {
+    let url = Url::parse("gemini://example.org/current").unwrap();
+    let (_, html) =
+      from_gemini("=> /next Next\n", &url, &Configuration::default()).unwrap();
+
+    assert!(html.contains("<p>"));
+    assert!(html.ends_with("</p>"));
   }
 
   #[test]
