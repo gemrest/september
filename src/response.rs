@@ -6,12 +6,25 @@ use {
     html::html_escape,
     url::{from_path as url_from_path, matches_pattern},
   },
-  actix_web::{Error, HttpResponse},
+  actix_web::{
+    Error, HttpResponse, HttpResponseBuilder,
+    http::{StatusCode, header},
+  },
   std::{fmt::Write, time::Instant},
 };
 
 const CSS: &str = include_str!("../default.css");
 const REDIRECT_LIMIT: usize = 5;
+
+// Remote documents must not run scripts or inherit this site's origin.
+fn sandboxed_upstream_response(status: StatusCode) -> HttpResponseBuilder {
+  let mut response = HttpResponse::build(status);
+
+  response.insert_header((header::CONTENT_SECURITY_POLICY, "sandbox"));
+  response.insert_header((header::X_CONTENT_TYPE_OPTIONS, "nosniff"));
+
+  response
+}
 
 // Percent-encode user input for use as a Gemini query. Encoding is done
 // byte-wise so that multi-byte UTF-8 sequences are encoded correctly.
@@ -270,7 +283,7 @@ pub async fn default(
   if response.meta().starts_with("image/") {
     if let Some(content_bytes) = &response.content_bytes() {
       return Ok(
-        HttpResponse::build(actix_web::http::StatusCode::OK)
+        sandboxed_upstream_response(actix_web::http::StatusCode::OK)
           .content_type(response.meta().as_ref())
           .body(content_bytes.to_vec()),
       );
@@ -351,7 +364,7 @@ pub async fn default(
 
   if configuration.raw {
     return Ok(
-      HttpResponse::build(http_status)
+      sandboxed_upstream_response(http_status)
         .content_type(format!("{}; charset={charset}", meta.mime()))
         .body(
           response
@@ -426,7 +439,10 @@ pub async fn default(
 
 #[cfg(test)]
 mod tests {
-  use super::document_head;
+  use {
+    super::{document_head, sandboxed_upstream_response},
+    actix_web::http::{StatusCode, header},
+  };
 
   #[test]
   fn escapes_gemini_language_in_html_attribute() {
@@ -448,5 +464,27 @@ mod tests {
       document_head("en-GB", "Title", false)
         .starts_with("<!DOCTYPE html><html lang=\"en-GB\"")
     );
+  }
+
+  #[test]
+  fn sandboxes_direct_upstream_content() {
+    for content_type in ["text/html", "image/svg+xml", "image/png"] {
+      let response = sandboxed_upstream_response(StatusCode::OK)
+        .content_type(content_type)
+        .body("upstream body");
+
+      assert_eq!(
+        response.headers().get(header::CONTENT_SECURITY_POLICY).unwrap(),
+        "sandbox"
+      );
+      assert_eq!(
+        response.headers().get(header::X_CONTENT_TYPE_OPTIONS).unwrap(),
+        "nosniff"
+      );
+      assert_eq!(
+        response.headers().get(header::CONTENT_TYPE).unwrap(),
+        content_type
+      );
+    }
   }
 }
