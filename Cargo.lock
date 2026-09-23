@@ -1245,6 +1245,7 @@ dependencies = [
  "dotenv",
  "germ",
  "log",
+ "percent-encoding",
  "pretty_env_logger",
  "serde",
  "tokio",

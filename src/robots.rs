@@ -59,7 +59,7 @@ pub async fn check_access(url: &Url) -> Access {
 
   drop(policies);
 
-  if policy.iter().any(|prefix| url.path().starts_with(prefix)) {
+  if is_disallowed(&policy, url.path()) {
     Access::Denied
   } else {
     Access::Allowed
@@ -77,6 +77,15 @@ fn cached_policy(origin: &str) -> Option<CachedPolicy> {
 }
 
 fn origin(url: &Url) -> String { url[..url::Position::BeforePath].to_string() }
+
+fn is_disallowed(paths: &[String], path: &str) -> bool {
+  let decoded_path =
+    percent_encoding::percent_decode_str(path).decode_utf8_lossy();
+
+  paths.iter().any(|prefix| {
+    path.starts_with(prefix) || decoded_path.starts_with(prefix.as_str())
+  })
+}
 
 async fn fetch_policy(url: &Url) -> Option<Vec<String>> {
   let mut robots_url = url.clone();
@@ -182,14 +191,14 @@ fn disallowed_paths(policy: &str, user_agent: &str) -> Vec<String> {
 
 impl CachedPolicy {
   fn allows(&self, path: &str) -> bool {
-    !self.disallowed_paths.iter().any(|prefix| path.starts_with(prefix))
+    !is_disallowed(&self.disallowed_paths, path)
   }
 }
 
 #[cfg(test)]
 mod tests {
   use {
-    super::{disallowed_paths, origin, policy_from_response},
+    super::{disallowed_paths, is_disallowed, origin, policy_from_response},
     germ::request::Status,
     url::Url,
   };
@@ -232,6 +241,15 @@ mod tests {
 
     assert_eq!(origin(&first), "gemini://first.example");
     assert_ne!(origin(&first), origin(&second));
+  }
+
+  #[test]
+  fn detects_encoded_disallowed_paths() {
+    let paths = vec!["/private".to_string()];
+    let url = Url::parse("gemini://example.org/pr%69vate/page").unwrap();
+
+    assert!(is_disallowed(&paths, url.path()));
+    assert!(!is_disallowed(&paths, "/public"));
   }
 
   #[test]
