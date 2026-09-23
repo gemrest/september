@@ -1,5 +1,5 @@
 use {
-  crate::{environment::ENVIRONMENT, url::from_path},
+  crate::{environment::ENVIRONMENT, robots, url::from_path},
   log::{error, info, warn},
   tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
@@ -57,22 +57,19 @@ async fn handle(
   let mut configuration =
     crate::response::configuration::Configuration::default();
   let url = from_path(&path, &mut configuration)?;
+
+  ensure_allowed(&url).await?;
+
   let mut response = germ::request::request(&url).await?;
 
   if *response.status() == germ::request::Status::PermanentRedirect
     || *response.status() == germ::request::Status::TemporaryRedirect
   {
-    let redirect = if response.meta().starts_with('/') {
-      format!(
-        "gemini://{}{}",
-        url.host_str().unwrap_or_default(),
-        response.meta()
-      )
-    } else {
-      response.meta().to_string()
-    };
+    let redirect = url.join(&response.meta())?;
 
-    response = germ::request::request(&url::Url::parse(&redirect)?).await?;
+    ensure_allowed(&redirect).await?;
+
+    response = germ::request::request(&redirect).await?;
   }
 
   if response.meta().starts_with("image/") {
@@ -86,6 +83,17 @@ async fn handle(
   writer.shutdown().await?;
 
   Ok(())
+}
+
+async fn ensure_allowed(url: &url::Url) -> std::io::Result<()> {
+  if robots::is_allowed(url).await {
+    Ok(())
+  } else {
+    Err(std::io::Error::new(
+      std::io::ErrorKind::PermissionDenied,
+      "The destination capsule prohibits access through web proxies.",
+    ))
+  }
 }
 
 fn parse_request(
