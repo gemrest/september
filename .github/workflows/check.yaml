@@ -16,5 +16,13 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
+      - name: Tests 🧪
+        run: cargo test --locked --all-features
       - name: Clippy 📎
-        run: cargo clippy --all-features --verbose
+        run: cargo clippy --locked --all-targets --all-features -- -D warnings
+      - name: Nightly rustfmt 🧰
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+      - name: Formatting 🎨
+        run: cargo +nightly fmt --all -- --check
