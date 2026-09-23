@@ -40,12 +40,12 @@ fn link_from_host_href(url: &Url, href: &str) -> Option<String> {
   }
 }
 
-fn safe(text: &str) -> String {
+fn render_text(text: &str) -> String {
   let is_ordered_list = text.starts_with(|c: char| c.is_ascii_digit())
     && text.get(1..3) == Some(". ");
 
   if is_ordered_list {
-    text.to_string()
+    html_escape(text)
   } else {
     comrak::markdown_to_html(text, &comrak::ComrakOptions::default())
       .replace("<p>", "")
@@ -130,7 +130,7 @@ pub fn from_gemini(
 
     match node {
       Node::Text(text) => {
-        let _ = write!(&mut html, "<p>{}</p>", safe(text));
+        let _ = write!(&mut html, "<p>{}</p>", render_text(text));
       }
       Node::Link { to, text } => {
         let mut href = to.clone();
@@ -227,7 +227,7 @@ pub fn from_gemini(
                   &mut html,
                   "<p><a href=\"{}\">{}</a> <i>Embedded below</i></p>",
                   sanitize_href(&href),
-                  safe(text.as_ref().unwrap_or(to)),
+                  render_text(text.as_ref().unwrap_or(to)),
                 );
               }
 
@@ -250,7 +250,7 @@ pub fn from_gemini(
           r#"{}<a href="{}">{}</a>"#,
           GEMINI_FRAGMENT,
           sanitize_href(&href),
-          safe(text.as_ref().unwrap_or(to)).trim(),
+          render_text(text.as_ref().unwrap_or(to)).trim(),
         );
       }
       Node::Heading { level, text } => {
@@ -259,7 +259,7 @@ pub fn from_gemini(
         }
 
         if title.is_empty() && *level == 1 {
-          title = safe(text).trim().to_string();
+          title = render_text(text).trim().to_string();
         }
 
         let _ = write!(
@@ -271,7 +271,7 @@ pub fn from_gemini(
             3 => "h3",
             _ => "p",
           },
-          safe(text),
+          render_text(text),
         );
       }
       Node::List(items) => {
@@ -280,13 +280,14 @@ pub fn from_gemini(
           "<ul>{}</ul>",
           items
             .iter()
-            .map(|i| format!("<li>{}</li>", safe(i)))
+            .map(|i| format!("<li>{}</li>", render_text(i)))
             .collect::<Vec<String>>()
             .join("\n")
         );
       }
       Node::Blockquote(text) => {
-        let _ = write!(&mut html, "<blockquote>{}</blockquote>", safe(text));
+        let _ =
+          write!(&mut html, "<blockquote>{}</blockquote>", render_text(text));
       }
       Node::PreformattedText { text, .. } => {
         let new_text = text.strip_suffix('\n').unwrap_or(text);
@@ -297,4 +298,28 @@ pub fn from_gemini(
   }
 
   Some((title, html))
+}
+
+#[cfg(test)]
+mod tests {
+  use super::render_text;
+
+  #[test]
+  fn escapes_numbered_text_without_changing_its_label() {
+    assert_eq!(
+      render_text("1. <script>alert(1)</script>"),
+      "1. &lt;script&gt;alert(1)&lt;/script&gt;"
+    );
+    assert_eq!(
+      render_text("1. <img src=x onerror=alert(1)>"),
+      "1. &lt;img src=x onerror=alert(1)&gt;"
+    );
+    assert_eq!(render_text("1. First item"), "1. First item");
+  }
+
+  #[test]
+  fn omits_raw_html_in_other_numbered_forms() {
+    assert!(!render_text("10. <script>alert(1)</script>").contains("<script>"));
+    assert!(!render_text("1) <script>alert(1)</script>").contains("<script>"));
+  }
 }
