@@ -28,8 +28,8 @@ fn sanitize_href(href: &str) -> String {
 }
 
 fn link_from_host_href(url: &Url, href: &str) -> Option<String> {
-  if href.starts_with("/proxy/") {
-    Some(format!("gemini://{}", href.replace("/proxy/", "")))
+  if let Some(destination) = href.strip_prefix("/proxy/") {
+    Some(format!("gemini://{destination}"))
   } else {
     Some(format!(
       "gemini://{}{}{}",
@@ -38,6 +38,22 @@ fn link_from_host_href(url: &Url, href: &str) -> Option<String> {
       href
     ))
   }
+}
+
+fn resolve_link(url: &Url, href: &str) -> Option<String> {
+  if href.starts_with('/') && !href.starts_with("//") {
+    return if href.starts_with("/proxy/") {
+      link_from_host_href(url, href)
+    } else {
+      Some(url.join(href).ok()?.to_string())
+    };
+  }
+
+  if href.contains(':') {
+    return Some(href.to_string());
+  }
+
+  Some(url.join(href).ok()?.to_string())
 }
 
 fn render_text(text: &str) -> String {
@@ -133,38 +149,13 @@ pub fn from_gemini(
         let _ = write!(&mut html, "<p>{}</p>", render_text(text));
       }
       Node::Link { to, text } => {
-        let mut href = to.clone();
-        let mut surface = false;
-
-        if href.starts_with("./") || href.starts_with("../") {
-          if let Ok(url) = url.join(&href) {
-            href = url.to_string();
-          }
-        }
-
-        if href.contains("://") && !href.starts_with("gemini://") {
-          surface = true;
-        } else if !href.contains("://") && href.contains(':') {
-          // href contains a scheme-like pattern (e.g., mailto:), keep as-is
-        } else if !href.starts_with("gemini://") && !href.starts_with('/') {
-          href = format!(
-            "{}/{}",
-            url.host_str()?,
-            if url.path().ends_with('/') {
-              format!("{}{}", url.path(), href)
-            } else {
-              format!("{}/{}", url.path(), href)
-            }
-          )
-          .replace("//", "/");
-          href = format!("gemini://{href}");
-        } else if href.starts_with('/') {
-          href = link_from_host_href(url, &href)?;
-        }
+        let mut href = resolve_link(url, to)?;
+        let external_scheme =
+          href.contains("://") && !href.starts_with("gemini://");
 
         if ENVIRONMENT.proxy_by_default
           && href.contains("gemini://")
-          && !surface
+          && !external_scheme
         {
           if configuration.proxy
             || configuration.no_css
@@ -191,7 +182,9 @@ pub fn from_gemini(
         }
 
         if let Some(patterns) = &ENVIRONMENT.keep_gemini {
-          if (href.starts_with('/') || !href.contains("://")) && !surface {
+          if (href.starts_with('/') || !href.contains("://"))
+            && !external_scheme
+          {
             let temporary_href = link_from_host_href(url, &href)?;
             let should_exclude = patterns
               .iter()
@@ -302,7 +295,36 @@ pub fn from_gemini(
 
 #[cfg(test)]
 mod tests {
-  use super::render_text;
+  use {
+    super::{link_from_host_href, render_text, resolve_link},
+    url::Url,
+  };
+
+  #[test]
+  fn resolves_links_relative_to_the_current_document() {
+    let url = Url::parse("gemini://example.org:1966/dir/page").unwrap();
+
+    assert_eq!(
+      resolve_link(&url, "next").as_deref(),
+      Some("gemini://example.org:1966/dir/next")
+    );
+    assert_eq!(
+      resolve_link(&url, "../next").as_deref(),
+      Some("gemini://example.org:1966/next")
+    );
+    assert_eq!(
+      resolve_link(&url, "?q=one").as_deref(),
+      Some("gemini://example.org:1966/dir/page?q=one")
+    );
+    assert_eq!(
+      resolve_link(&url, "/next").as_deref(),
+      Some("gemini://example.org:1966/next")
+    );
+    assert_eq!(
+      link_from_host_href(&url, "/proxy/other.org/proxy/next").as_deref(),
+      Some("gemini://other.org/proxy/next")
+    );
+  }
 
   #[test]
   fn escapes_numbered_text_without_changing_its_label() {
