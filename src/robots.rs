@@ -302,6 +302,6 @@ User-agent: indexer
 Disallow: /
 ";
 
-    assert!(disallowed_paths(policy, "webproxy").is_empty());
+    assert_eq!(disallowed_paths(policy, "webproxy"), Vec::<String>::new());
   }
 }
