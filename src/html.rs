@@ -1,6 +1,6 @@
 use {
   crate::{environment::ENVIRONMENT, url::matches_pattern},
-  germ::ast::Node,
+  germ::{ast::Node, convert::html::Renderer},
   std::fmt::Write,
   url::Url,
 };
@@ -119,189 +119,206 @@ fn align_adjacent_links(html: &str, previous_link_count: usize) -> String {
   )
 }
 
-#[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
+struct ProxyRenderer<'a> {
+  url:                          &'a Url,
+  configuration: &'a crate::response::configuration::Configuration,
+  title:                        String,
+  previous_link_count:          Option<usize>,
+  condense_links:               bool,
+  condense_links_under_heading: bool,
+  link_failed:                  bool,
+}
+
+impl ProxyRenderer<'_> {
+  fn close_links(&mut self, html: &mut String) {
+    if let Some(previous_link_count) = self.previous_link_count.take() {
+      html.push_str("</p>");
+
+      *html = align_adjacent_links(html, previous_link_count);
+    }
+  }
+
+  #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
+  fn render_link(
+    &mut self,
+    destination: &str,
+    label: Option<&str>,
+    html: &mut String,
+  ) -> Option<()> {
+    let label = label.unwrap_or(destination);
+    let mut href = resolve_link(self.url, destination)?;
+    let external_scheme =
+      href.contains("://") && !href.starts_with("gemini://");
+
+    if ENVIRONMENT.proxy_by_default
+      && href.contains("gemini://")
+      && !external_scheme
+    {
+      let destination_host = href
+        .trim_start_matches("gemini://")
+        .trim_end_matches('/')
+        .split('/')
+        .next()
+        .unwrap_or_default();
+
+      if self.configuration.proxy
+        || self.configuration.no_css
+        || destination_host != self.url.host_str().unwrap_or_default()
+      {
+        href = format!(
+          "/{}/{}",
+          if self.configuration.no_css { "nocss" } else { "proxy" },
+          href.trim_start_matches("gemini://")
+        );
+      } else {
+        href = href.trim_start_matches("gemini://").replacen(
+          self.url.host_str()?,
+          "",
+          1,
+        );
+      }
+    }
+
+    if let Some(patterns) = &ENVIRONMENT.keep_gemini {
+      if (href.starts_with('/') || !href.contains("://")) && !external_scheme {
+        let temporary_href = link_from_host_href(self.url, &href)?;
+        let should_exclude = patterns
+          .iter()
+          .filter(|pattern| pattern.starts_with('!'))
+          .any(|pattern| matches_pattern(&pattern[1..], &temporary_href));
+
+        if !should_exclude {
+          let should_include = patterns
+            .iter()
+            .filter(|pattern| !pattern.starts_with('!'))
+            .any(|pattern| matches_pattern(pattern, &temporary_href));
+
+          if should_include {
+            href = temporary_href;
+          }
+        }
+      }
+    }
+
+    if let Some(image) = ENVIRONMENT
+      .embed_images
+      .as_deref()
+      .and_then(|mode| embedded_image(&href, label, mode))
+    {
+      self.close_links(html);
+      html.push_str(&image);
+
+      return Some(());
+    }
+
+    if let Some(previous_link_count) = self.previous_link_count {
+      if self.condense_links || self.condense_links_under_heading {
+        *html = align_adjacent_links(html, previous_link_count);
+
+        html.push_str(r#" <span class="gemini-fragment">|</span> "#);
+
+        self.previous_link_count = Some(previous_link_count + 1);
+      } else {
+        html.push_str("<br />");
+      }
+    } else {
+      html.push_str("<p>");
+
+      self.previous_link_count = Some(0);
+    }
+
+    let _ = write!(
+      html,
+      r#"{}<a href="{}">{}</a>"#,
+      GEMINI_FRAGMENT,
+      sanitize_href(&href),
+      render_text(label).trim(),
+    );
+
+    Some(())
+  }
+}
+
+impl Renderer for ProxyRenderer<'_> {
+  fn format_text(&mut self, text: &str, html: &mut String) {
+    html.push_str(&render_text(text));
+  }
+
+  fn format_preformatted(&mut self, text: &str, html: &mut String) {
+    let trimmed_text = text.strip_suffix('\n').unwrap_or(text);
+
+    html.push_str(&html_escape(trimmed_text));
+  }
+
+  fn list_item_separator(&self) -> &'static str { "\n" }
+
+  fn render_node(&mut self, node: &Node, html: &mut String) -> bool {
+    if self.link_failed {
+      return true;
+    }
+
+    let condensible_heading =
+      ENVIRONMENT.condense_links_at_headings.contains(&node.to_gemtext());
+
+    if condensible_heading {
+      self.condense_links_under_heading = true;
+    }
+
+    if !matches!(node, Node::Link { .. }) {
+      self.close_links(html);
+    }
+
+    match node {
+      Node::Link { to, text } => {
+        self.link_failed =
+          self.render_link(to, text.as_deref(), html).is_none();
+
+        true
+      }
+
+      Node::Heading { level, text } => {
+        if !condensible_heading {
+          self.condense_links_under_heading = false;
+        }
+
+        if self.title.is_empty() && *level == 1 {
+          self.title = render_text(text).trim().to_string();
+        }
+
+        false
+      }
+
+      _ => false,
+    }
+  }
+
+  fn finish(&mut self, html: &mut String) { self.close_links(html); }
+}
+
 pub fn from_gemini(
   content: &str,
   url: &Url,
   configuration: &crate::response::configuration::Configuration,
 ) -> Option<(String, String)> {
-  let ast_tree = germ::ast::Ast::from_string(content);
-  let ast = ast_tree.inner();
-  let mut html = String::new();
-  let mut title = String::new();
-  let mut previous_link = false;
-  let mut previous_link_count = 0;
-  let condense_links =
-    ENVIRONMENT.condense_links.contains(&url.path().to_string())
-      || ENVIRONMENT.condense_links.contains(&"*".to_string());
-  let condensible_headings = ENVIRONMENT
-    .condense_links_at_headings
-    .iter()
-    .map(String::as_str)
-    .collect::<Vec<_>>();
-  let mut condense_links_under_heading = false;
+  let mut renderer = ProxyRenderer {
+    url,
+    configuration,
+    title: String::new(),
+    previous_link_count: None,
+    condense_links: ENVIRONMENT
+      .condense_links
+      .contains(&url.path().to_string())
+      || ENVIRONMENT.condense_links.contains(&"*".to_string()),
+    condense_links_under_heading: false,
+    link_failed: false,
+  };
+  let html = germ::convert::html::from_string(content, &mut renderer);
 
-  for node in ast {
-    if condensible_headings.contains(&node.to_gemtext().as_str()) {
-      condense_links_under_heading = true;
-    }
-
-    if previous_link && !matches!(node, Node::Link { .. }) {
-      html.push_str("</p>");
-      previous_link = false;
-      html = align_adjacent_links(&html, previous_link_count);
-      previous_link_count = 0;
-    }
-
-    match node {
-      Node::Text(text) => {
-        let _ = write!(&mut html, "<p>{}</p>", render_text(text));
-      }
-      Node::Link { to, text } => {
-        let mut href = resolve_link(url, to)?;
-        let external_scheme =
-          href.contains("://") && !href.starts_with("gemini://");
-
-        if ENVIRONMENT.proxy_by_default
-          && href.contains("gemini://")
-          && !external_scheme
-        {
-          if configuration.proxy
-            || configuration.no_css
-            || href
-              .trim_start_matches("gemini://")
-              .trim_end_matches('/')
-              .split('/')
-              .next()
-              .unwrap_or_default()
-              != url.host_str().unwrap_or_default()
-          {
-            href = format!(
-              "/{}/{}",
-              if configuration.no_css { "nocss" } else { "proxy" },
-              href.trim_start_matches("gemini://")
-            );
-          } else {
-            href = href.trim_start_matches("gemini://").replacen(
-              url.host_str()?,
-              "",
-              1,
-            );
-          }
-        }
-
-        if let Some(patterns) = &ENVIRONMENT.keep_gemini {
-          if (href.starts_with('/') || !href.contains("://"))
-            && !external_scheme
-          {
-            let temporary_href = link_from_host_href(url, &href)?;
-            let should_exclude = patterns
-              .iter()
-              .filter(|p| p.starts_with('!'))
-              .any(|p| matches_pattern(&p[1..], &temporary_href));
-
-            if !should_exclude {
-              let should_include = patterns
-                .iter()
-                .filter(|p| !p.starts_with('!'))
-                .any(|p| matches_pattern(p, &temporary_href));
-
-              if should_include {
-                href = temporary_href;
-              }
-            }
-          }
-        }
-
-        if let Some(image) =
-          ENVIRONMENT.embed_images.as_deref().and_then(|mode| {
-            embedded_image(&href, text.as_ref().unwrap_or(to), mode)
-          })
-        {
-          if previous_link {
-            html.push_str("</p>");
-            html = align_adjacent_links(&html, previous_link_count);
-            previous_link = false;
-            previous_link_count = 0;
-          }
-
-          html.push_str(&image);
-
-          continue;
-        }
-
-        if previous_link {
-          if condense_links || condense_links_under_heading {
-            html = align_adjacent_links(&html, previous_link_count);
-            html.push_str(r#" <span class="gemini-fragment">|</span> "#);
-            previous_link_count += 1;
-          } else {
-            html.push_str("<br />");
-          }
-        } else {
-          html.push_str("<p>");
-        }
-
-        previous_link = true;
-
-        let _ = write!(
-          &mut html,
-          r#"{}<a href="{}">{}</a>"#,
-          GEMINI_FRAGMENT,
-          sanitize_href(&href),
-          render_text(text.as_ref().unwrap_or(to)).trim(),
-        );
-      }
-      Node::Heading { level, text } => {
-        if !condensible_headings.contains(&node.to_gemtext().as_str()) {
-          condense_links_under_heading = false;
-        }
-
-        if title.is_empty() && *level == 1 {
-          title = render_text(text).trim().to_string();
-        }
-
-        let _ = write!(
-          &mut html,
-          "<{}>{}</{0}>",
-          match level {
-            1 => "h1",
-            2 => "h2",
-            3 => "h3",
-            _ => "p",
-          },
-          render_text(text),
-        );
-      }
-      Node::List(items) => {
-        let _ = write!(
-          &mut html,
-          "<ul>{}</ul>",
-          items
-            .iter()
-            .map(|i| format!("<li>{}</li>", render_text(i)))
-            .collect::<Vec<String>>()
-            .join("\n")
-        );
-      }
-      Node::Blockquote(text) => {
-        let _ =
-          write!(&mut html, "<blockquote>{}</blockquote>", render_text(text));
-      }
-      Node::PreformattedText { text, .. } => {
-        let new_text = text.strip_suffix('\n').unwrap_or(text);
-        let _ = write!(&mut html, "<pre>{}</pre>", html_escape(new_text));
-      }
-      Node::Whitespace => {}
-    }
+  if renderer.link_failed {
+    return None;
   }
 
-  if previous_link {
-    html.push_str("</p>");
-    html = align_adjacent_links(&html, previous_link_count);
-  }
-
-  Some((title, html))
+  Some((renderer.title, html))
 }
 
 #[cfg(test)]
@@ -362,6 +379,56 @@ mod tests {
 
     assert!(html.contains("<p>"));
     assert!(html.ends_with("</p>"));
+  }
+
+  #[test]
+  fn preserves_formatting_in_standard_elements() {
+    let url = Url::parse("gemini://example.org/current").unwrap();
+    let (title, html) = from_gemini(
+      "# *Title*\nText **bold**\n* One\n* Two\n> Quote\n```alt\n<&>\"'\n\n```",
+      &url,
+      &Configuration::default(),
+    )
+    .unwrap();
+
+    assert_eq!(title, "<em>Title</em>");
+    assert_eq!(
+      html,
+      concat!(
+        "<h1><em>Title</em>\n</h1><p>Text <strong>bold</strong>\n</p>",
+        "<ul><li>One\n</li>\n<li>Two\n</li></ul>",
+        "<blockquote>Quote\n</blockquote><pre>&lt;&amp;&gt;&quot;'\n</pre>",
+      ),
+    );
+  }
+
+  #[test]
+  fn closes_link_groups_at_whitespace_and_headings() {
+    let url = Url::parse("gemini://example.org/current").unwrap();
+    let (_, html) = from_gemini(
+      "=> /one One\n\n=> /two Two\n# Heading\n=> /three Three",
+      &url,
+      &Configuration::default(),
+    )
+    .unwrap();
+
+    assert!(html.contains("One</a></p><p>"));
+    assert!(html.contains("Two</a></p><h1>Heading\n</h1><p>"));
+    assert!(html.ends_with("Three</a></p>"));
+  }
+
+  #[test]
+  fn rejects_unresolvable_links_without_returning_partial_html() {
+    let url = Url::parse("gemini://example.org/current").unwrap();
+
+    assert!(
+      from_gemini(
+        "Text\n=> //[invalid Broken\n# Heading",
+        &url,
+        &Configuration::default(),
+      )
+      .is_none()
+    );
   }
 
   #[test]

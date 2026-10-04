@@ -22,7 +22,7 @@ opt-level = 3
 
 [dependencies]
 # Gemini
-germ = { version = "0.5.1", default-features = false, features = ["ast", "meta", "request"] }
+germ = { version = "0.5.2", default-features = false, features = ["ast", "convert", "meta", "request"] }
 anyhow = "1"
 
 # HTTP
