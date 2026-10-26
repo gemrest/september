@@ -65,7 +65,7 @@ fn render_text(text: &str) -> String {
   if is_ordered_list {
     html_escape(text)
   } else {
-    comrak::markdown_to_html(text, &comrak::ComrakOptions::default())
+    comrak::markdown_to_html(text, &comrak::Options::default())
       .replace("<p>", "")
       .replace("</p>", "")
   }

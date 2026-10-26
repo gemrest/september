@@ -43,7 +43,7 @@ url = "2.5.4"
 percent-encoding = "2.3.2"
 
 # Markdown Encoding
-comrak = { version = "0.29.0", default-features = false }
+comrak = { version = "0.58.0", default-features = false }
 
 # Form Parsing
 serde = { version = "1", features = ["derive"] }
