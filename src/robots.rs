@@ -167,10 +167,13 @@ fn disallowed_paths(policy: &str, user_agent: &str) -> Vec<String> {
       }
 
       agents.push(value.to_ascii_lowercase());
-    } else if field.eq_ignore_ascii_case("disallow") && !agents.is_empty() {
+    } else if !agents.is_empty()
+      && (field.eq_ignore_ascii_case("allow")
+        || field.eq_ignore_ascii_case("disallow"))
+    {
       has_directive = true;
 
-      if !value.is_empty() {
+      if field.eq_ignore_ascii_case("disallow") && !value.is_empty() {
         paths.push(value.to_string());
       }
     }
@@ -297,6 +300,19 @@ Disallow: /draft # This is private.
     let policy = "\
 User-agent: webproxy
 Disallow:
+
+User-agent: indexer
+Disallow: /
+";
+
+    assert_eq!(disallowed_paths(policy, "webproxy"), Vec::<String>::new());
+  }
+
+  #[test]
+  fn allow_ends_a_group() {
+    let policy = "\
+User-agent: webproxy
+Allow: /
 
 User-agent: indexer
 Disallow: /
