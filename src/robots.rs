@@ -10,6 +10,7 @@ use {
 };
 
 const CACHE_LIFETIME: Duration = Duration::from_secs(60 * 60);
+const UNAVAILABLE_CACHE_LIFETIME: Duration = Duration::from_secs(60);
 const MAXIMUM_POLICY_LENGTH: usize = 512 * 1024;
 const REDIRECT_LIMIT: usize = 5;
 const VIRTUAL_USER_AGENT: &str = "webproxy";
@@ -19,7 +20,9 @@ static POLICIES: LazyLock<Mutex<HashMap<String, CachedPolicy>>> =
 
 #[derive(Clone)]
 struct CachedPolicy {
-  disallowed_paths: Vec<String>,
+  // `None` records that the policy could not be fetched, so that requests to
+  // an unreachable capsule do not each wait on another fetch.
+  disallowed_paths: Option<Vec<String>>,
   fetched_at:       Instant,
 }
 
@@ -37,33 +40,23 @@ pub async fn check_access(url: &Url) -> Access {
   let origin = origin(url);
 
   if let Some(policy) = cached_policy(&origin) {
-    return if policy.allows(url.path()) {
-      Access::Allowed
-    } else {
-      Access::Denied
-    };
+    return policy.access(url.path());
   }
 
-  let Some(policy) = fetch_policy(url).await else {
-    return Access::Unavailable;
+  let policy = CachedPolicy {
+    disallowed_paths: fetch_policy(url).await,
+    fetched_at:       Instant::now(),
   };
-
+  let access = policy.access(url.path());
   let mut policies =
     POLICIES.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
 
-  policies.retain(|_, policy| policy.fetched_at.elapsed() < CACHE_LIFETIME);
-  policies.insert(origin, CachedPolicy {
-    disallowed_paths: policy.clone(),
-    fetched_at:       Instant::now(),
-  });
+  policies.retain(|_, policy| policy.is_fresh());
+  policies.insert(origin, policy);
 
   drop(policies);
 
-  if is_disallowed(&policy, url.path()) {
-    Access::Denied
-  } else {
-    Access::Allowed
-  }
+  access
 }
 
 fn cached_policy(origin: &str) -> Option<CachedPolicy> {
@@ -73,7 +66,7 @@ fn cached_policy(origin: &str) -> Option<CachedPolicy> {
     .get(origin)
     .cloned()?;
 
-  (policy.fetched_at.elapsed() < CACHE_LIFETIME).then_some(policy)
+  policy.is_fresh().then_some(policy)
 }
 
 fn origin(url: &Url) -> String { url[..url::Position::BeforePath].to_string() }
@@ -193,16 +186,34 @@ fn disallowed_paths(policy: &str, user_agent: &str) -> Vec<String> {
 }
 
 impl CachedPolicy {
-  fn allows(&self, path: &str) -> bool {
-    !is_disallowed(&self.disallowed_paths, path)
+  fn access(&self, path: &str) -> Access {
+    match &self.disallowed_paths {
+      None => Access::Unavailable,
+      Some(paths) if is_disallowed(paths, path) => Access::Denied,
+      Some(_) => Access::Allowed,
+    }
+  }
+
+  fn is_fresh(&self) -> bool {
+    let lifetime = if self.disallowed_paths.is_some() {
+      CACHE_LIFETIME
+    } else {
+      UNAVAILABLE_CACHE_LIFETIME
+    };
+
+    self.fetched_at.elapsed() < lifetime
   }
 }
 
 #[cfg(test)]
 mod tests {
   use {
-    super::{disallowed_paths, is_disallowed, origin, policy_from_response},
+    super::{
+      Access, CachedPolicy, UNAVAILABLE_CACHE_LIFETIME, disallowed_paths,
+      is_disallowed, origin, policy_from_response,
+    },
     germ::request::Status,
+    std::time::{Duration, Instant},
     url::Url,
   };
 
@@ -319,5 +330,21 @@ Disallow: /
 ";
 
     assert_eq!(disallowed_paths(policy, "webproxy"), Vec::<String>::new());
+  }
+
+  #[test]
+  fn expires_unavailable_policies_sooner_than_fetched_ones() {
+    let age = UNAVAILABLE_CACHE_LIFETIME + Duration::from_secs(1);
+    let fetched_at = Instant::now().checked_sub(age).unwrap();
+    let unavailable = CachedPolicy { disallowed_paths: None, fetched_at };
+    let fetched = CachedPolicy { disallowed_paths: Some(vec![]), fetched_at };
+
+    assert!(matches!(unavailable.access("/"), Access::Unavailable));
+    assert!(!unavailable.is_fresh());
+    assert!(fetched.is_fresh());
+    assert!(
+      CachedPolicy { disallowed_paths: None, fetched_at: Instant::now() }
+        .is_fresh()
+    );
   }
 }
