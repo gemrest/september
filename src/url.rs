@@ -5,17 +5,19 @@ pub fn from_path(
   configuration: &mut crate::response::configuration::Configuration,
 ) -> Result<Url, url::ParseError> {
   Url::try_from(&*if let Some(remainder) =
-    route_remainder(path, "/proxy").or_else(|| route_remainder(path, "/x"))
+    remainder_after_route_segment(path, "/proxy")
+      .or_else(|| remainder_after_route_segment(path, "/x"))
   {
     configuration.proxy = true;
 
     format!("gemini://{remainder}")
-  } else if let Some(remainder) = route_remainder(path, "/raw") {
+  } else if let Some(remainder) = remainder_after_route_segment(path, "/raw") {
     configuration.proxy = true;
     configuration.raw = true;
 
     format!("gemini://{remainder}")
-  } else if let Some(remainder) = route_remainder(path, "/nocss") {
+  } else if let Some(remainder) = remainder_after_route_segment(path, "/nocss")
+  {
     configuration.proxy = true;
     configuration.no_css = true;
 
@@ -25,9 +27,10 @@ pub fn from_path(
   })
 }
 
-// A route prefix only matches a whole path segment: "/raw" and "/raw/..."
-// are the raw route, but "/rawhide" is a page on the root capsule.
-fn route_remainder<'a>(path: &'a str, prefix: &str) -> Option<&'a str> {
+fn remainder_after_route_segment<'a>(
+  path: &'a str,
+  prefix: &str,
+) -> Option<&'a str> {
   match path.strip_prefix(prefix)? {
     "" => Some(""),
     remainder => remainder.strip_prefix('/'),
