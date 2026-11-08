@@ -20,7 +20,6 @@ const REDIRECT_LIMIT: usize = 5;
 const MAXIMUM_PROXY_DURATION: std::time::Duration =
   std::time::Duration::from_secs(90);
 
-// Remote documents must not run scripts or inherit this site's origin.
 fn sandboxed_upstream_response(status: StatusCode) -> HttpResponseBuilder {
   let mut response = HttpResponse::build(status);
 
@@ -52,8 +51,6 @@ fn upstream_error(message: impl std::fmt::Display) -> HttpResponse {
     .body(message.to_string())
 }
 
-// Percent-encode user input for use as a Gemini query. Encoding is done
-// byte-wise so that multi-byte UTF-8 sequences are encoded correctly.
 fn percent_encode_query(input: &str) -> String {
   let mut encoded = String::with_capacity(input.len());
 

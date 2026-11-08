@@ -14,36 +14,20 @@ keywords = ["rust", "gemini", "proxy"]
 categories = ["web-programming", "web-programming::http-server"]
 rust-version = "1.83.0"
 
-# Slower builds, faster executables
 [profile.release]
 lto = "fat"
 codegen-units = 1
 opt-level = 3
 
 [dependencies]
-# Gemini
 germ = { version = "0.5.2", default-features = false, features = ["ast", "convert", "meta", "request"] }
 anyhow = "1"
-
-# HTTP
 actix-web = "4.11.0"
-
-# Async Runtime
 tokio = { version = "1", features = ["net", "io-util", "time"] }
-
-# Logging
 pretty_env_logger = "0.5.0"
 log = "0.4.27"
-
-# Environment Variables
 dotenv = "0.15.0"
-
-# URL Standard
 url = "2.5.4"
 percent-encoding = "2.3.2"
-
-# Markdown Encoding
 comrak = { version = "0.58.0", default-features = false }
-
-# Form Parsing
 serde = { version = "1", features = ["derive"] }
