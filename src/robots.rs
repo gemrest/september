@@ -20,10 +20,14 @@ static POLICIES: LazyLock<Mutex<HashMap<String, CachedPolicy>>> =
 
 #[derive(Clone)]
 struct CachedPolicy {
-  // `None` records that the policy could not be fetched, so that requests to
-  // an unreachable capsule do not each wait on another fetch.
-  disallowed_paths: Option<Vec<String>>,
-  fetched_at:       Instant,
+  rules:      Rules,
+  fetched_at: Instant,
+}
+
+#[derive(Clone)]
+enum Rules {
+  Fetched(Vec<String>),
+  Unavailable,
 }
 
 pub enum Access {
@@ -44,8 +48,10 @@ pub async fn check_access(url: &Url) -> Access {
   }
 
   let policy = CachedPolicy {
-    disallowed_paths: fetch_policy(url).await,
-    fetched_at:       Instant::now(),
+    rules:      fetch_policy(url)
+      .await
+      .map_or(Rules::Unavailable, Rules::Fetched),
+    fetched_at: Instant::now(),
   };
   let access = policy.access(url.path());
   let mut policies =
@@ -187,18 +193,17 @@ fn disallowed_paths(policy: &str, user_agent: &str) -> Vec<String> {
 
 impl CachedPolicy {
   fn access(&self, path: &str) -> Access {
-    match &self.disallowed_paths {
-      None => Access::Unavailable,
-      Some(paths) if is_disallowed(paths, path) => Access::Denied,
-      Some(_) => Access::Allowed,
+    match &self.rules {
+      Rules::Unavailable => Access::Unavailable,
+      Rules::Fetched(paths) if is_disallowed(paths, path) => Access::Denied,
+      Rules::Fetched(_) => Access::Allowed,
     }
   }
 
   fn is_fresh(&self) -> bool {
-    let lifetime = if self.disallowed_paths.is_some() {
-      CACHE_LIFETIME
-    } else {
-      UNAVAILABLE_CACHE_LIFETIME
+    let lifetime = match self.rules {
+      Rules::Fetched(_) => CACHE_LIFETIME,
+      Rules::Unavailable => UNAVAILABLE_CACHE_LIFETIME,
     };
 
     self.fetched_at.elapsed() < lifetime
@@ -209,8 +214,8 @@ impl CachedPolicy {
 mod tests {
   use {
     super::{
-      Access, CachedPolicy, UNAVAILABLE_CACHE_LIFETIME, disallowed_paths,
-      is_disallowed, origin, policy_from_response,
+      Access, CachedPolicy, Rules, UNAVAILABLE_CACHE_LIFETIME,
+      disallowed_paths, is_disallowed, origin, policy_from_response,
     },
     germ::request::Status,
     std::time::{Duration, Instant},
@@ -336,15 +341,18 @@ Disallow: /
   fn expires_unavailable_policies_sooner_than_fetched_ones() {
     let age = UNAVAILABLE_CACHE_LIFETIME + Duration::from_secs(1);
     let fetched_at = Instant::now().checked_sub(age).unwrap();
-    let unavailable = CachedPolicy { disallowed_paths: None, fetched_at };
-    let fetched = CachedPolicy { disallowed_paths: Some(vec![]), fetched_at };
+    let unavailable = CachedPolicy { rules: Rules::Unavailable, fetched_at };
+    let fetched = CachedPolicy { rules: Rules::Fetched(vec![]), fetched_at };
 
     assert!(matches!(unavailable.access("/"), Access::Unavailable));
     assert!(!unavailable.is_fresh());
     assert!(fetched.is_fresh());
     assert!(
-      CachedPolicy { disallowed_paths: None, fetched_at: Instant::now() }
-        .is_fresh()
+      CachedPolicy {
+        rules:      Rules::Unavailable,
+        fetched_at: Instant::now(),
+      }
+      .is_fresh()
     );
   }
 }
