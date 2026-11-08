@@ -138,7 +138,6 @@ impl ProxyRenderer<'_> {
     }
   }
 
-  #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
   fn render_link(
     &mut self,
     destination: &str,
